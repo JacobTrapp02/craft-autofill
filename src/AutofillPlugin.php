@@ -6,12 +6,14 @@ use Craft;
 use craft\base\Model;
 use craft\base\Plugin;
 use jtdev\craftautofill\models\Settings;
+use jtdev\craftautofill\services\ai\AiService;
 
 /**
  * Autofill plugin
  *
  * @method static AutofillPlugin getInstance()
  * @method Settings getSettings()
+ * @method AiService getAiService()
  * @author JTDev <jake.trapp02@gmail.com>
  * @copyright JTDev
  * @license https://craftcms.github.io/license/ Craft License
@@ -25,7 +27,7 @@ class AutofillPlugin extends Plugin
     {
         return [
             'components' => [
-                // Define component configs here...
+                'aiService' => AiService::class,
             ],
         ];
     }

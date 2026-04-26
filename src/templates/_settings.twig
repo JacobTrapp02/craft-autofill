@@ -3,4 +3,83 @@
 
 {% import '_includes/forms.twig' as forms %}
 
-{# ... #}
+{% set providerOptions = [
+    { label: 'OpenAI', value: 'openai' },
+] %}
+
+{% set reasoningOptions = [
+    { label: 'Default', value: '' },
+    { label: 'Low', value: 'low' },
+    { label: 'Medium', value: 'medium' },
+    { label: 'High', value: 'high' },
+] %}
+
+{% set modelConfigRows = {} %}
+{% for config in settings.modelConfigs %}
+    {% set rowId = config.uid ?? ('row-' ~ loop.index) %}
+    {% set modelConfigRows = modelConfigRows|merge({
+        (rowId): {
+            uid: config.uid ?? '',
+            label: config.label ?? '',
+            provider: config.provider ?? 'openai',
+            apiKeyEnv: config.apiKeyEnv ?? '',
+            modelId: config.modelId ?? '',
+            reasoningEffort: config.reasoningEffort ?? '',
+            enabled: config.enabled ?? true,
+        }
+    }) %}
+{% endfor %}
+
+{{ forms.editableTableField({
+    label: 'AI Model Configurations',
+    instructions: 'Add one or more model configs. Store API keys as env var references like `$OPENAI_API_KEY`. The first enabled row is treated as the default.',
+    id: 'modelConfigs',
+    name: 'modelConfigs',
+    cols: {
+        uid: {
+            type: 'singleline',
+            heading: 'UID',
+            class: 'hidden',
+        },
+        label: {
+            type: 'singleline',
+            heading: 'Internal Label',
+            info: 'Used in admin/editor selections.',
+            placeholder: 'Marketing Fast Draft',
+        },
+        provider: {
+            type: 'select',
+            heading: 'Provider',
+            options: providerOptions,
+            thin: true,
+        },
+        apiKeyEnv: {
+            type: 'autosuggest',
+            heading: 'API Key Env',
+            suggestEnvVars: true,
+            placeholder: '$OPENAI_API_KEY',
+        },
+        modelId: {
+            type: 'singleline',
+            heading: 'Model ID',
+            placeholder: 'gpt-4.1-mini',
+        },
+        reasoningEffort: {
+            type: 'select',
+            heading: 'Reasoning',
+            options: reasoningOptions,
+            thin: true,
+        },
+        enabled: {
+            type: 'lightswitch',
+            heading: 'Enabled',
+            thin: true,
+        },
+    },
+    rows: modelConfigRows,
+    allowAdd: true,
+    allowDelete: true,
+    allowReorder: true,
+    fullWidth: true,
+    errors: settings.getErrors('modelConfigs')|unique,
+}) }}
