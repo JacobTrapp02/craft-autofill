@@ -1,0 +1,60 @@
+<div class="matrixblock" data-row role="listitem">
+    <div class="titlebar">
+        <div class="blocktype"><strong>Autofill Row</strong></div>
+        <div class="actions">
+            <button type="button" class="btn small" data-action="move-up">Up</button>
+            <button type="button" class="btn small" data-action="move-down">Down</button>
+            <button type="button" class="btn small" data-action="remove-row">Remove</button>
+        </div>
+    </div>
+
+    <div class="fields">
+        <div class="target-prompt-row">
+            <div class="field target-field-col">
+                <div class="heading"><label>Target Field</label></div>
+                <div class="input ltr">
+                    <div class="select target-field-select-wrap">
+                        <select class="js-target-field-select" name="rows[{{ rowId }}][targetFieldUid]">
+                            {% for option in supportedFieldOptions %}
+                                <option
+                                    value="{{ option.value }}"
+                                    {% if option.fieldType is defined %}data-field-type="{{ option.fieldType }}"{% endif %}
+                                    {% if option.value == (row.targetFieldUid ?? '') %} selected{% endif %}
+                                >{{ option.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="light autofill-target-meta" data-target-meta></div>
+                </div>
+            </div>
+
+            <div class="field prompt-col">
+                <div class="heading"><label>Prompt</label></div>
+                <div class="input ltr">
+                    <textarea class="text fullwidth" rows="2" name="rows[{{ rowId }}][prompt]" placeholder="Describe how this field should be generated">{{ row.prompt ?? '' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <details class="autofill-advanced"{% if showAdvancedByDefault %} open{% endif %}>
+            <summary class="autofill-advanced-summary"><span>Advanced Settings</span></summary>
+            <div class="autofill-advanced-body">
+                <div class="field lights-row">
+                    <div class="heading"><label>Behavior</label></div>
+                    <div class="input ltr autofill-row-toggles">
+                        <label class="checkbox-label">
+                            <input type="hidden" name="rows[{{ rowId }}][requiresApproval]" value="0">
+                            <input type="checkbox" name="rows[{{ rowId }}][requiresApproval]" value="1"{% if row.requiresApproval ?? true %} checked{% endif %}>
+                            Requires Editor Approval
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="hidden" name="rows[{{ rowId }}][enabled]" value="0">
+                            <input type="checkbox" name="rows[{{ rowId }}][enabled]" value="1"{% if row.enabled ?? true %} checked{% endif %}>
+                            Row Enabled
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </details>
+    </div>
+</div>

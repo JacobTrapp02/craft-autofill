@@ -5,8 +5,14 @@ namespace jtdev\craftautofill;
 use Craft;
 use craft\base\Model;
 use craft\base\Plugin;
+use craft\events\RegisterComponentTypesEvent;
+use craft\services\Fields;
 use jtdev\craftautofill\models\Settings;
 use jtdev\craftautofill\services\ai\AiService;
+use jtdev\craftautofill\services\fields\FieldAdapterService;
+use jtdev\craftautofill\services\fields\FieldDiscoveryService;
+use jtdev\craftautofill\fields\AutofillField;
+use yii\base\Event;
 
 /**
  * Autofill plugin
@@ -14,6 +20,8 @@ use jtdev\craftautofill\services\ai\AiService;
  * @method static AutofillPlugin getInstance()
  * @method Settings getSettings()
  * @method AiService getAiService()
+ * @method FieldAdapterService getFieldAdapterService()
+ * @method FieldDiscoveryService getFieldDiscoveryService()
  * @author JTDev <jake.trapp02@gmail.com>
  * @copyright JTDev
  * @license https://craftcms.github.io/license/ Craft License
@@ -28,6 +36,8 @@ class AutofillPlugin extends Plugin
         return [
             'components' => [
                 'aiService' => AiService::class,
+                'fieldAdapterService' => FieldAdapterService::class,
+                'fieldDiscoveryService' => FieldDiscoveryService::class,
             ],
         ];
     }
@@ -60,7 +70,12 @@ class AutofillPlugin extends Plugin
 
     private function attachEventHandlers(): void
     {
-        // Register event handlers here ...
-        // (see https://craftcms.com/docs/5.x/extend/events.html to get started)
+        Event::on(
+            Fields::class,
+            Fields::EVENT_REGISTER_FIELD_TYPES,
+            static function(RegisterComponentTypesEvent $event): void {
+                $event->types[] = AutofillField::class;
+            }
+        );
     }
 }

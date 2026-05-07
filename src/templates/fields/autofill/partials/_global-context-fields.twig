@@ -1,0 +1,73 @@
+<div class="field" data-autofill-context-settings-field>
+    <div class="heading">
+        <label>Global Context</label>
+        <div class="instructions">
+            <p>Set shared instructions and optional context fields for all rows in this Autofill profile.</p>
+        </div>
+    </div>
+
+    <div class="field">
+        <div class="heading">
+            <label for="globalPrompt">Global Prompt</label>
+            <div class="instructions">
+                <p>Optional high-level instructions applied to all generation rows (for example, persona, tone, or quality rules).</p>
+            </div>
+        </div>
+        <div class="input ltr">
+            <textarea
+                id="globalPrompt"
+                class="text fullwidth"
+                rows="3"
+                name="globalPrompt"
+                placeholder="Example: You are an SEO expert. Fill fields with clear, search-optimized language."
+            >{{ globalPrompt ?? '' }}</textarea>
+        </div>
+        {% if globalPromptErrors %}
+            <ul class="errors">
+                {% for error in globalPromptErrors|unique %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    {{ hiddenInput('contextRows', '') }}
+
+    <div class="matrix matrix-field autofill-context-builder" data-autofill-context-builder>
+        <div class="blocks" data-context-rows-container role="list">
+            {% for contextRow in uiContextRows %}
+                {% include 'autofill/fields/autofill/partials/_global-context-row.twig' with {
+                    contextRow: contextRow,
+                    contextRowId: 'context-row-' ~ loop.index0,
+                    supportedFieldOptions: supportedFieldOptions,
+                    showAdvancedByDefault: not (contextRow.enabled ?? true),
+                } only %}
+            {% endfor %}
+        </div>
+
+        <div class="buttons">
+            <button type="button" class="btn add icon" data-action="add-context-row">Add Context Field</button>
+        </div>
+    </div>
+
+    {% if contextRowErrors %}
+        <ul class="errors">
+            {% for error in contextRowErrors|unique %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</div>
+
+<template data-context-row-template>
+    {% include 'autofill/fields/autofill/partials/_global-context-row.twig' with {
+        contextRow: {
+            fieldUid: '',
+            prompt: '',
+            enabled: true,
+        },
+        contextRowId: '__CONTEXT_INDEX__',
+        supportedFieldOptions: supportedFieldOptions,
+        showAdvancedByDefault: false,
+    } only %}
+</template>

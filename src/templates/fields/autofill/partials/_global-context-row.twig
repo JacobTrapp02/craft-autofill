@@ -1,0 +1,58 @@
+<div class="matrixblock" data-context-row role="listitem">
+    <div class="titlebar">
+        <div class="blocktype"><strong>Context Row</strong></div>
+        <div class="actions">
+            <button type="button" class="btn small" data-action="remove-context-row">Remove</button>
+        </div>
+    </div>
+
+    <div class="fields">
+        <div class="context-row-grid">
+            <div class="field context-field-col">
+                <div class="heading"><label>Context Field</label></div>
+                <div class="input ltr">
+                    <div class="select target-field-select-wrap">
+                        <select class="js-global-context-select" name="contextRows[{{ contextRowId }}][fieldUid]">
+                            {% for option in supportedFieldOptions %}
+                                <option
+                                    value="{{ option.value }}"
+                                    {% if option.fieldType is defined %}data-field-type="{{ option.fieldType }}"{% endif %}
+                                    {% if option.value == (contextRow.fieldUid ?? '') %} selected{% endif %}
+                                >{{ option.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="light autofill-context-meta" data-context-meta></div>
+                </div>
+            </div>
+
+            <div class="field context-prompt-col">
+                <div class="heading"><label>Context Prompt (Optional)</label></div>
+                <div class="input ltr">
+                    <textarea
+                        class="text fullwidth"
+                        rows="2"
+                        name="contextRows[{{ contextRowId }}][prompt]"
+                        placeholder="Optional guidance for how this context should be interpreted"
+                    >{{ contextRow.prompt ?? '' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <details class="autofill-advanced"{% if showAdvancedByDefault ?? false %} open{% endif %}>
+            <summary class="autofill-advanced-summary"><span>Advanced Settings</span></summary>
+            <div class="autofill-advanced-body">
+                <div class="field lights-row">
+                    <div class="heading"><label>Behavior</label></div>
+                    <div class="input ltr autofill-row-toggles">
+                        <label class="checkbox-label">
+                            <input type="hidden" name="contextRows[{{ contextRowId }}][enabled]" value="0">
+                            <input type="checkbox" name="contextRows[{{ contextRowId }}][enabled]" value="1"{% if contextRow.enabled ?? true %} checked{% endif %}>
+                            Row Enabled
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </details>
+    </div>
+</div>

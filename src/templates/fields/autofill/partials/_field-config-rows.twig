@@ -1,0 +1,49 @@
+<div class="field" data-autofill-row-settings-field>
+    <div class="heading">
+        <label>Field Configuration Rows</label>
+        <div class="instructions">
+            <p>Configure rows in generation order. Each row maps one target field to prompt behavior.</p>
+        </div>
+    </div>
+
+    {{ hiddenInput('rows', '') }}
+
+    <div class="matrix matrix-field autofill-row-builder" data-autofill-row-builder>
+        <div class="blocks" data-rows-container role="list">
+            {% for row in uiRows %}
+                {% include 'autofill/fields/autofill/partials/_autofill-row.twig' with {
+                    row: row,
+                    rowId: 'row-' ~ loop.index0,
+                    supportedFieldOptions: supportedFieldOptions,
+                    showAdvancedByDefault: not (row.requiresApproval ?? true) or not (row.enabled ?? true),
+                } only %}
+            {% endfor %}
+        </div>
+
+        <div class="buttons">
+            <button type="button" class="btn add icon" data-action="add-row">Add Row</button>
+        </div>
+    </div>
+
+    {% if rowErrors %}
+        <ul class="errors">
+            {% for error in rowErrors|unique %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</div>
+
+<template data-row-template>
+    {% include 'autofill/fields/autofill/partials/_autofill-row.twig' with {
+        row: {
+            targetFieldUid: '',
+            prompt: '',
+            requiresApproval: true,
+            enabled: true,
+        },
+        rowId: '__INDEX__',
+        supportedFieldOptions: supportedFieldOptions,
+        showAdvancedByDefault: false,
+    } only %}
+</template>

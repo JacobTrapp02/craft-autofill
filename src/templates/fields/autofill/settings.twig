@@ -1,0 +1,73 @@
+{% import '_includes/forms.twig' as forms %}
+{% do view.registerAssetBundle('craft\\web\\assets\\selectize\\SelectizeAsset') %}
+
+{% set supportedFieldOptions = [{ label: 'Select a field', value: '' }] %}
+{% set supportedFieldTypeMap = {} %}
+{% for supportedField in supportedFields %}
+    {% set supportedFieldOptions = supportedFieldOptions|merge([
+        {
+            label: supportedField.name,
+            value: supportedField.uid,
+            fieldType: supportedField.adapter,
+        }
+    ]) %}
+    {% set supportedFieldTypeMap = supportedFieldTypeMap|merge({
+        (supportedField.uid): supportedField.adapter
+    }) %}
+{% endfor %}
+
+{% set uiRows = rows is not empty ? rows : [
+    {
+        targetFieldUid: '',
+        prompt: '',
+        requiresApproval: true,
+        enabled: true,
+    }
+] %}
+
+{% set uiContextRows = contextRows is not empty ? contextRows : [] %}
+
+{{ forms.selectField({
+    label: 'Entry Type Scope',
+    instructions: 'Choose the entry type this Autofill profile config applies to.',
+    id: 'entryTypeUid',
+    name: 'entryTypeUid',
+    options: entryTypeOptions,
+    value: field.entryTypeUid,
+    errors: field.getErrors('entryTypeUid'),
+}) }}
+
+{{ forms.selectField({
+    label: 'Model Config',
+    instructions: 'Choose an override model config for this field, or use global default behavior.',
+    id: 'modelConfigUid',
+    name: 'modelConfigUid',
+    options: modelConfigOptions,
+    value: field.modelConfigUid,
+    errors: field.getErrors('modelConfigUid'),
+}) }}
+
+{% set rowErrors = field.getErrors('rows') %}
+{% include 'autofill/fields/autofill/partials/_field-config-rows.twig' with {
+    uiRows: uiRows,
+    supportedFieldOptions: supportedFieldOptions,
+    rowErrors: rowErrors,
+} only %}
+
+{% set contextRowErrors = field.getErrors('contextRows') %}
+{% set globalPromptErrors = field.getErrors('globalPrompt') %}
+{% include 'autofill/fields/autofill/partials/_global-context-fields.twig' with {
+    uiContextRows: uiContextRows,
+    supportedFieldOptions: supportedFieldOptions,
+    globalPrompt: field.globalPrompt,
+    globalPromptErrors: globalPromptErrors,
+    contextRowErrors: contextRowErrors,
+} only %}
+
+{% css %}
+{% include 'autofill/fields/autofill/assets/_settings.css.twig' %}
+{% endcss %}
+
+{% js %}
+{% include 'autofill/fields/autofill/assets/_settings.js.twig' %}
+{% endjs %}

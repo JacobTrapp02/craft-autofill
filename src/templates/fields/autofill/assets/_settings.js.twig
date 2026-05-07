@@ -1,0 +1,260 @@
+(() => {
+    const builder = document.querySelector('[data-autofill-row-builder]');
+    const container = builder?.querySelector('[data-rows-container]');
+    const addButton = builder?.querySelector('[data-action="add-row"]');
+    const template = document.querySelector('template[data-row-template]');
+
+    const contextBuilder = document.querySelector('[data-autofill-context-builder]');
+    const contextContainer = contextBuilder?.querySelector('[data-context-rows-container]');
+    const addContextButton = contextBuilder?.querySelector('[data-action="add-context-row"]');
+    const contextTemplate = document.querySelector('template[data-context-row-template]');
+
+    if (!builder || !container || !addButton || !template) {
+        return;
+    }
+
+    const fieldTypeByUid = {{ supportedFieldTypeMap|json_encode|raw }};
+    const allFieldOptions = {{ supportedFieldOptions|json_encode|raw }};
+    const hasSelectize = !!(window.jQuery && window.jQuery.fn && window.jQuery.fn.selectize);
+
+    const formatFieldType = (raw) => {
+        if (!raw) {
+            return '';
+        }
+        const withSpaces = String(raw)
+            .replace(/([a-z])([A-Z])/g, '$1 $2')
+            .replace(/[_-]+/g, ' ');
+        return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
+    };
+
+    const refreshFieldMeta = (row, selectSelector, metaSelector, labelPrefix = 'Field Type: ') => {
+        const select = row?.querySelector(selectSelector);
+        const meta = row?.querySelector(metaSelector);
+        if (!select || !meta) {
+            return;
+        }
+
+        const selectedOption = select.selectedOptions && select.selectedOptions.length > 0
+            ? select.selectedOptions[0]
+            : null;
+        const optionFieldType = selectedOption?.dataset?.fieldType || '';
+        const fieldType = formatFieldType(fieldTypeByUid[select.value] || optionFieldType);
+
+        if (!select.value) {
+            meta.textContent = '';
+            return;
+        }
+
+        meta.textContent = fieldType ? `${labelPrefix}${fieldType}` : '';
+    };
+
+    const refreshTargetMeta = (row) => {
+        refreshFieldMeta(row, 'select.js-target-field-select', '[data-target-meta]', 'Field Type: ');
+    };
+
+    const refreshContextMeta = (row) => {
+        refreshFieldMeta(row, 'select.js-global-context-select', '[data-context-meta]', 'Field Type: ');
+    };
+
+    const initSelectizeGroup = (row, selector, config = {}) => {
+        if (!hasSelectize || !row) {
+            return;
+        }
+
+        const $row = window.jQuery(row);
+        $row.find(selector).each(function() {
+            const $select = window.jQuery(this);
+            if ($select.data('selectize')) {
+                return;
+            }
+
+            $select.selectize({
+                plugins: ['auto_position', 'selectize-plugin-a11y'],
+                placeholder: 'Select a field',
+                maxItems: 1,
+                closeAfterSelect: true,
+                allowEmptyOption: true,
+                showEmptyOptionInDropdown: true,
+                ...config,
+            });
+        });
+    };
+
+    const initRowSelectize = (row) => {
+        initSelectizeGroup(row, 'select.js-target-field-select', {
+            placeholder: 'Select a target field',
+            onInitialize() {
+                refreshTargetMeta(row);
+            },
+            onChange() {
+                refreshTargetMeta(row);
+                refreshSelectableFieldOptions();
+            },
+        });
+        refreshTargetMeta(row);
+    };
+
+    const initContextSelectize = (row) => {
+        initSelectizeGroup(row, 'select.js-global-context-select', {
+            placeholder: 'Select a context field',
+            onInitialize() {
+                refreshContextMeta(row);
+            },
+            onChange() {
+                refreshContextMeta(row);
+                refreshSelectableFieldOptions();
+            },
+        });
+        refreshContextMeta(row);
+    };
+
+    const getManagedFieldSelects = () => ([
+        ...Array.from(document.querySelectorAll('select.js-target-field-select')),
+        ...Array.from(document.querySelectorAll('select.js-global-context-select')),
+    ]);
+
+    const refreshSelectableFieldOptions = () => {
+        const selects = getManagedFieldSelects();
+        const selectedValues = selects
+            .map((select) => String(select.value || '').trim())
+            .filter((value) => value !== '');
+
+        selects.forEach((select) => {
+            const ownValue = String(select.value || '').trim();
+            const blockedValues = new Set(selectedValues.filter((value) => value !== ownValue));
+            const nextOptions = allFieldOptions.filter((option) => {
+                const value = String(option.value || '').trim();
+                if (value === '' || value === ownValue) {
+                    return true;
+                }
+                return !blockedValues.has(value);
+            });
+
+            if (hasSelectize) {
+                const selectize = window.jQuery(select)[0]?.selectize;
+                if (selectize) {
+                    selectize.clearOptions();
+                    nextOptions.forEach((option) => {
+                        const optionValue = String(option.value || '');
+                        selectize.addOption({
+                            value: optionValue,
+                            text: option.label || optionValue,
+                            fieldType: option.fieldType || '',
+                        });
+                    });
+                    selectize.refreshOptions(false);
+                    if (ownValue && nextOptions.some((option) => String(option.value || '') === ownValue)) {
+                        selectize.setValue(ownValue, true);
+                    } else {
+                        selectize.setValue('', true);
+                    }
+                }
+            } else {
+                select.innerHTML = '';
+                nextOptions.forEach((option) => {
+                    const opt = document.createElement('option');
+                    opt.value = String(option.value || '');
+                    opt.textContent = option.label || opt.value;
+                    if (option.fieldType) {
+                        opt.dataset.fieldType = String(option.fieldType);
+                    }
+                    if (opt.value === ownValue) {
+                        opt.selected = true;
+                    }
+                    select.appendChild(opt);
+                });
+            }
+        });
+
+        container.querySelectorAll('[data-row]').forEach((row) => refreshTargetMeta(row));
+        contextContainer?.querySelectorAll('[data-context-row]').forEach((row) => refreshContextMeta(row));
+    };
+
+    let index = container.querySelectorAll('[data-row]').length;
+    let contextIndex = contextContainer ? contextContainer.querySelectorAll('[data-context-row]').length : 0;
+
+    const addRow = () => {
+        const token = `new-${index++}`;
+        const html = template.innerHTML.split('__INDEX__').join(token);
+        container.insertAdjacentHTML('beforeend', html);
+        const row = container.lastElementChild;
+        initRowSelectize(row);
+        refreshSelectableFieldOptions();
+    };
+
+    const addContextRow = () => {
+        if (!contextContainer || !contextTemplate) {
+            return;
+        }
+
+        const token = `new-context-${contextIndex++}`;
+        const html = contextTemplate.innerHTML.split('__CONTEXT_INDEX__').join(token);
+        contextContainer.insertAdjacentHTML('beforeend', html);
+        const row = contextContainer.lastElementChild;
+        initContextSelectize(row);
+        refreshSelectableFieldOptions();
+    };
+
+    container.querySelectorAll('[data-row]').forEach((row) => initRowSelectize(row));
+    contextContainer?.querySelectorAll('[data-context-row]').forEach((row) => initContextSelectize(row));
+    refreshSelectableFieldOptions();
+
+    addButton.addEventListener('click', addRow);
+    addContextButton?.addEventListener('click', addContextRow);
+
+    const handleRowActions = (event, options) => {
+        const rawTarget = event.target;
+        if (!(rawTarget instanceof HTMLElement)) {
+            return;
+        }
+
+        const actionButton = rawTarget.closest('[data-action]');
+        if (!(actionButton instanceof HTMLElement)) {
+            return;
+        }
+        const action = actionButton.dataset.action || '';
+        const row = actionButton.closest(options.rowSelector);
+        if (!action || !row) {
+            return;
+        }
+
+        if (action === options.removeAction) {
+            row.remove();
+            refreshSelectableFieldOptions();
+            return;
+        }
+
+        if (!options.allowMove) {
+            return;
+        }
+
+        if (action === 'move-up') {
+            const prev = row.previousElementSibling;
+            if (prev) {
+                options.container.insertBefore(row, prev);
+            }
+            return;
+        }
+
+        if (action === 'move-down') {
+            const next = row.nextElementSibling;
+            if (next) {
+                options.container.insertBefore(next, row);
+            }
+        }
+    };
+
+    container.addEventListener('click', (event) => handleRowActions(event, {
+        container,
+        rowSelector: '[data-row]',
+        removeAction: 'remove-row',
+        allowMove: true,
+    }));
+
+    contextContainer?.addEventListener('click', (event) => handleRowActions(event, {
+        container: contextContainer,
+        rowSelector: '[data-context-row]',
+        removeAction: 'remove-context-row',
+        allowMove: false,
+    }));
+})();
