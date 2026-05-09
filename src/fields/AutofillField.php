@@ -94,9 +94,29 @@ class AutofillField extends Field
 
     protected function inputHtml(mixed $value, ?ElementInterface $element, bool $inline): string
     {
+        $fieldContractsByUid = [];
+
+        if ($element?->getFieldLayout()) {
+            $adapterService = AutofillPlugin::getInstance()->fieldAdapterService;
+            foreach ($element->getFieldLayout()->getCustomFields() as $layoutField) {
+                $uid = (string)($layoutField->uid ?? '');
+                if ($uid === '') {
+                    continue;
+                }
+
+                $adapter = $adapterService->getAdapterForField($layoutField);
+                if ($adapter === null) {
+                    continue;
+                }
+
+                $fieldContractsByUid[$uid] = $adapter->buildPromptContract($layoutField);
+            }
+        }
+
         return Craft::$app->getView()->renderTemplate('autofill/fields/autofill/input.twig', [
             'field' => $this,
             'element' => $element,
+            'fieldContractsByUid' => $fieldContractsByUid,
         ]);
     }
 

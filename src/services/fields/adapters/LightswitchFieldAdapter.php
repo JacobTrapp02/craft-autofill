@@ -59,15 +59,12 @@ class LightswitchFieldAdapter implements FieldAdapterInterface
 
     public function buildPromptContract(FieldInterface $field, array $promptConfig = []): array
     {
-        $normalized = $this->normalizePromptConfig($promptConfig, $field);
-
         return [
             'type' => 'boolean',
             'rules' => [
                 'Return true or false only.',
                 'Do not return yes/no strings.',
             ],
-            'prompt' => $normalized['prompt'],
         ];
     }
 

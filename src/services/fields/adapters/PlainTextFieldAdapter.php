@@ -59,15 +59,12 @@ class PlainTextFieldAdapter implements FieldAdapterInterface
 
     public function buildPromptContract(FieldInterface $field, array $promptConfig = []): array
     {
-        $normalized = $this->normalizePromptConfig($promptConfig, $field);
-
         return [
             'type' => 'string',
             'rules' => [
                 'Return a plain text string only.',
                 'Do not return markdown, HTML, or explanations.',
             ],
-            'prompt' => $normalized['prompt'],
         ];
     }
 

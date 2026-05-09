@@ -1,4 +1,144 @@
-<div class="readable">
-    <p><strong>Autofill assistant panel placeholder.</strong></p>
-    <p>This field's editor UI will be implemented in the editor interface phase.</p>
+{% set contextValueByUid = {} %}
+{% set fieldNameByUid = {} %}
+
+{% if element and element.getFieldLayout() %}
+    {% for layoutField in element.getFieldLayout().getCustomFields() %}
+        {% set fieldUid = layoutField.uid ?? '' %}
+        {% if fieldUid %}
+            {% set fieldNameByUid = fieldNameByUid|merge({ (fieldUid): layoutField.name ?? fieldUid }) %}
+
+            {% set rawValue = element.getFieldValue(layoutField.handle ?? '') %}
+            {% if rawValue is same as(null) %}
+                {% set resolvedValue = '' %}
+            {% elseif rawValue is iterable and rawValue is not same as('') %}
+                {% set resolvedValue = rawValue|json_encode %}
+            {% elseif rawValue is object %}
+                {% set resolvedValue = rawValue|json_encode %}
+            {% else %}
+                {% set resolvedValue = rawValue ~ '' %}
+            {% endif %}
+
+            {% set contextValueByUid = contextValueByUid|merge({ (fieldUid): resolvedValue|trim }) %}
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
+{% set previewConfig = {
+    globalPrompt: field.globalPrompt ?? '',
+    rows: field.rows ?? [],
+    contextRows: field.contextRows ?? [],
+    fieldNameByUid: fieldNameByUid,
+    fieldContractsByUid: fieldContractsByUid ?? {},
+    contextValueByUid: contextValueByUid,
+} %}
+
+<div class="autofill-runtime" data-autofill-runtime>
+    <div class="field">
+        <div class="heading">
+            <label for="autofill-user-prompt-{{ field.handle }}">Prompt</label>
+            <div class="instructions">
+                <p>Enter user input/context, then click Generate to preview the exact prompt payload (no AI request is sent).</p>
+            </div>
+        </div>
+        <div class="input ltr">
+            <textarea
+                id="autofill-user-prompt-{{ field.handle }}"
+                class="text fullwidth"
+                rows="5"
+                data-autofill-user-prompt
+                placeholder="Type your request/context here..."
+            ></textarea>
+        </div>
+    </div>
+
+    <div class="buttons">
+        <button type="button" class="btn submit" data-autofill-generate>Generate</button>
+    </div>
+
+    <div class="field">
+        <div class="heading">
+            <label>Built Prompt Preview</label>
+        </div>
+        <div class="input ltr">
+            <textarea class="text fullwidth code" rows="16" readonly data-autofill-preview placeholder="Preview appears here after clicking Generate."></textarea>
+        </div>
+    </div>
 </div>
+
+{% js %}
+(() => {
+    const root = document.querySelector('[data-autofill-runtime]');
+    if (!root) {
+        return;
+    }
+
+    const generateButton = root.querySelector('[data-autofill-generate]');
+    const userPromptInput = root.querySelector('[data-autofill-user-prompt]');
+    const previewOutput = root.querySelector('[data-autofill-preview]');
+    if (!(generateButton instanceof HTMLButtonElement) || !(userPromptInput instanceof HTMLTextAreaElement) || !(previewOutput instanceof HTMLTextAreaElement)) {
+        return;
+    }
+
+    const config = {{ previewConfig|json_encode|raw }};
+
+    generateButton.addEventListener('click', () => {
+        const userPrompt = userPromptInput.value.trim();
+
+        const activeRows = (config.rows || [])
+            .filter((row) => row && row.enabled !== false)
+            .map((row) => ({
+                targetFieldName: config.fieldNameByUid?.[row.targetFieldUid] || row.targetFieldUid || '',
+                fieldContract: config.fieldContractsByUid?.[row.targetFieldUid] || {},
+                prompt: row.prompt || '',
+            }));
+
+        const activeContextRows = (config.contextRows || [])
+            .filter((row) => row && row.enabled !== false)
+            .map((row) => ({
+                fieldName: config.fieldNameByUid?.[row.fieldUid] || row.fieldUid || '',
+                fieldContract: config.fieldContractsByUid?.[row.fieldUid] || {},
+                contextPrompt: row.prompt || '',
+                value: config.contextValueByUid?.[row.fieldUid] || '',
+            }));
+
+        const instruction = [
+            'You are filling structured content fields.',
+            'You will receive:',
+            '1) Global instructions',
+            '2) User input',
+            '3) Context fields (read-only)',
+            '4) Generation rows to fill',
+            '',
+            'Return only valid JSON as an array of objects in generation row order.',
+            'Each object must include: fieldName, value.',
+            'Do not include markdown or explanations.',
+        ].join('\n');
+
+        const globalPromptText = (config.globalPrompt || '').trim();
+        const globalPromptSection = globalPromptText !== '' ? globalPromptText : '(none)';
+        const userPromptSection = userPrompt !== '' ? userPrompt : '(none)';
+        const contextJson = JSON.stringify(activeContextRows, null, 2);
+        const rowsJson = JSON.stringify(activeRows, null, 2);
+
+        previewOutput.value = [
+            'SYSTEM INSTRUCTION',
+            instruction,
+            '',
+            'GLOBAL PROMPT',
+            globalPromptSection,
+            '',
+            'USER INPUT',
+            userPromptSection,
+            '',
+            'CONTEXT_FIELDS_JSON',
+            contextJson,
+            '',
+            'GENERATION_ROWS_JSON',
+            rowsJson,
+            '',
+            'RESPONSE_FORMAT_JSON',
+            '[{"fieldName":"Example Field","value":"..."}]',
+        ].join('\n');
+    });
+})();
+{% endjs %}
