@@ -1,0 +1,437 @@
+(() => {
+    const root = document.querySelector('[data-autofill-runtime]');
+    if (!root) {
+        return;
+    }
+
+    const generateButton = root.querySelector('[data-autofill-generate]');
+    const userPromptInput = root.querySelector('[data-autofill-user-prompt]');
+    const previewOutput = root.querySelector('[data-autofill-preview]');
+    const responseInput = root.querySelector('[data-autofill-response-input]');
+    const parseResponseButton = root.querySelector('[data-autofill-parse-response]');
+    if (!(generateButton instanceof HTMLButtonElement) || !(userPromptInput instanceof HTMLTextAreaElement) || !(previewOutput instanceof HTMLTextAreaElement)) {
+        return;
+    }
+
+    const config = window.__autofillPreviewConfig || {};
+    const normalizeName = (value) => String(value || '').trim().toLowerCase();
+    const targetFieldMap = new Map();
+    (config.rows || [])
+        .filter((row) => row && row.enabled !== false)
+        .forEach((row) => {
+            const name = config.fieldNameByUid?.[row.targetFieldUid] || row.targetFieldUid || '';
+            const handle = config.fieldHandleByUid?.[row.targetFieldUid] || '';
+            if (!name || !handle) {
+                return;
+            }
+            targetFieldMap.set(normalizeName(name), {
+                name,
+                handle,
+            });
+        });
+
+    const parseJsonFromInput = (raw) => {
+        const text = String(raw || '').trim();
+        if (!text) {
+            return null;
+        }
+        try {
+            return JSON.parse(text);
+        } catch (error) {
+            const start = text.indexOf('[');
+            const end = text.lastIndexOf(']');
+            if (start >= 0 && end > start) {
+                return JSON.parse(text.slice(start, end + 1));
+            }
+            throw error;
+        }
+    };
+
+    const findFieldInputByHandle = (handle) => {
+        const escaped = window.CSS && typeof window.CSS.escape === 'function' ? window.CSS.escape(handle) : handle.replace(/"/g, '\\"');
+        const base = `[name="fields[${escaped}]"]`;
+        return (
+            document.querySelector(`textarea${base}`) ||
+            document.querySelector(`input[type="text"]${base}`) ||
+            document.querySelector(`input[type="tel"]${base}`) ||
+            document.querySelector(`input[type="number"]${base}`) ||
+            document.querySelector(`input[type="checkbox"]${base}`) ||
+            document.querySelector(`input${base}`) ||
+            null
+        );
+    };
+
+    const TOP_VIEWPORT_OFFSET = 96;
+
+    const scrollFieldIntoTopView = (input) => {
+        const absoluteTop = input.getBoundingClientRect().top + window.scrollY;
+        const targetY = Math.max(0, absoluteTop - TOP_VIEWPORT_OFFSET);
+        window.scrollTo({ top: targetY, left: 0, behavior: 'auto' });
+    };
+
+    const activateTabForInput = (input) => {
+        const nearestPane = input.closest('.pane[id], .content-pane[id], [id]');
+        const panes = [];
+        if (nearestPane instanceof HTMLElement) {
+            panes.push(nearestPane);
+        }
+
+        const fallbackAncestors = [];
+        let cursor = input.parentElement;
+        while (cursor) {
+            if (cursor.id) {
+                fallbackAncestors.push(cursor);
+            }
+            cursor = cursor.parentElement;
+        }
+
+        const candidates = [...new Set([...panes, ...fallbackAncestors])];
+        const pane = candidates.find((candidate) => {
+            const id = candidate.id || '';
+            return id.startsWith('tab') || id.includes('--') || candidate.classList.contains('pane') || candidate.classList.contains('content-pane');
+        });
+
+        if (!(pane instanceof HTMLElement)) {
+            return;
+        }
+
+        const paneId = pane.id;
+        if (!paneId) {
+            return;
+        }
+
+        const selectors = [
+            `.tabs a[href="#${paneId}"]`,
+            `.tabs button[data-id="${paneId}"]`,
+            `[role="tablist"] a[href="#${paneId}"]`,
+            `[role="tablist"] [aria-controls="${paneId}"]`,
+            `[data-tabs] a[href="#${paneId}"]`,
+            `a[href="#${paneId}"]`,
+        ];
+        const tabTrigger = document.querySelector(selectors.join(', '));
+
+        if (tabTrigger instanceof HTMLElement) {
+            tabTrigger.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+            tabTrigger.click();
+            if (window.location.hash !== `#${paneId}`) {
+                history.replaceState(null, '', `#${paneId}`);
+            }
+            return;
+        }
+
+        pane.classList.remove('hidden');
+        pane.classList.add('active');
+        pane.style.display = '';
+        pane.removeAttribute('aria-hidden');
+        if (window.location.hash !== `#${paneId}`) {
+            history.replaceState(null, '', `#${paneId}`);
+        }
+    };
+
+    const prepareInputForInteraction = (input) => {
+        activateTabForInput(input);
+        scrollFieldIntoTopView(input);
+        input.focus();
+        positionModalBelowField(input);
+    };
+
+    const applySuggestionValue = (handle, value) => {
+        const input = findFieldInputByHandle(handle);
+        if (!(input instanceof HTMLElement)) {
+            return false;
+        }
+
+        prepareInputForInteraction(input);
+
+        if (input instanceof HTMLInputElement && input.type === 'checkbox') {
+            const boolValue = ['1', 'true', 'yes', 'on'].includes(String(value).trim().toLowerCase());
+            input.checked = boolValue;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+        }
+
+        if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
+            input.value = String(value ?? '');
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+        }
+
+        return false;
+    };
+
+    let suggestions = [];
+    let currentIndex = 0;
+
+    const modalState = {
+        backdrop: null,
+        modal: null,
+        status: null,
+        field: null,
+        value: null,
+        accept: null,
+        reject: null,
+        prev: null,
+        next: null,
+        close: null,
+    };
+
+    const teardownModal = () => {
+        if (modalState.backdrop instanceof HTMLElement) {
+            modalState.backdrop.remove();
+        }
+        if (modalState.modal instanceof HTMLElement) {
+            modalState.modal.remove();
+        }
+        Object.keys(modalState).forEach((key) => {
+            modalState[key] = null;
+        });
+    };
+
+    const ensureModal = () => {
+        if (modalState.modal instanceof HTMLElement) {
+            return;
+        }
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'autofill-review-modal-backdrop';
+
+        const modal = document.createElement('div');
+        modal.className = 'autofill-review-modal';
+        modal.innerHTML = `
+            <div class="heading">
+                <label>Suggestion Review</label>
+                <div class="instructions"><p data-autofill-review-status></p></div>
+            </div>
+            <div class="input ltr">
+                <input type="text" class="text fullwidth" readonly data-autofill-review-field>
+                <textarea class="text fullwidth" rows="3" data-autofill-review-value></textarea>
+            </div>
+            <div class="buttons">
+                <button type="button" class="btn submit" data-autofill-accept>Accept</button>
+                <button type="button" class="btn" data-autofill-reject>Reject</button>
+                <button type="button" class="btn" data-autofill-prev>Prev</button>
+                <button type="button" class="btn" data-autofill-next>Next</button>
+                <button type="button" class="btn" data-autofill-close>Close</button>
+            </div>
+        `;
+
+        document.body.appendChild(backdrop);
+        document.body.appendChild(modal);
+
+        modalState.backdrop = backdrop;
+        modalState.modal = modal;
+        modalState.status = modal.querySelector('[data-autofill-review-status]');
+        modalState.field = modal.querySelector('[data-autofill-review-field]');
+        modalState.value = modal.querySelector('[data-autofill-review-value]');
+        modalState.accept = modal.querySelector('[data-autofill-accept]');
+        modalState.reject = modal.querySelector('[data-autofill-reject]');
+        modalState.prev = modal.querySelector('[data-autofill-prev]');
+        modalState.next = modal.querySelector('[data-autofill-next]');
+        modalState.close = modal.querySelector('[data-autofill-close]');
+    };
+
+    const focusMatchedField = (matchedHandle) => {
+        if (!matchedHandle) {
+            return;
+        }
+        const input = findFieldInputByHandle(matchedHandle);
+        if (!(input instanceof HTMLElement)) {
+            return;
+        }
+        prepareInputForInteraction(input);
+    };
+
+    const positionModalBelowField = (input) => {
+        if (!(modalState.modal instanceof HTMLElement)) {
+            return;
+        }
+
+        const gap = 12;
+        const viewportPadding = 12;
+        const rect = input.getBoundingClientRect();
+        const modalHeight = modalState.modal.offsetHeight || 320;
+        const idealTop = rect.bottom + gap;
+        const maxTop = window.innerHeight - modalHeight - viewportPadding;
+        const computedTop = Math.max(viewportPadding, Math.min(idealTop, maxTop));
+        modalState.modal.style.top = `${computedTop}px`;
+    };
+
+    const renderCurrentSuggestion = () => {
+        if (!suggestions.length) {
+            teardownModal();
+            return;
+        }
+
+        ensureModal();
+        if (
+            !(modalState.status instanceof HTMLElement) ||
+            !(modalState.field instanceof HTMLInputElement) ||
+            !(modalState.value instanceof HTMLTextAreaElement)
+        ) {
+            return;
+        }
+
+        const current = suggestions[currentIndex];
+        modalState.status.textContent = `Suggestion ${currentIndex + 1} of ${suggestions.length}`;
+        modalState.field.value = `${current.fieldName}${current.matchedHandle ? ` -> ${current.matchedHandle}` : ' (no matching field found)'}`;
+        modalState.value.value = String(current.value ?? '');
+        focusMatchedField(current.matchedHandle);
+    };
+
+    generateButton.addEventListener('click', () => {
+        const userPrompt = userPromptInput.value.trim();
+
+        const activeRows = (config.rows || [])
+            .filter((row) => row && row.enabled !== false)
+            .map((row) => ({
+                targetFieldName: config.fieldNameByUid?.[row.targetFieldUid] || row.targetFieldUid || '',
+                fieldContract: config.fieldContractsByUid?.[row.targetFieldUid] || {},
+                prompt: row.prompt || '',
+            }));
+
+        const activeContextRows = (config.contextRows || [])
+            .filter((row) => row && row.enabled !== false)
+            .map((row) => ({
+                fieldName: config.fieldNameByUid?.[row.fieldUid] || row.fieldUid || '',
+                fieldContract: config.fieldContractsByUid?.[row.fieldUid] || {},
+                contextPrompt: row.prompt || '',
+                value: config.contextValueByUid?.[row.fieldUid] || '',
+            }));
+
+        const instruction = [
+            'You are filling structured content fields.',
+            'You will receive:',
+            '1) Global instructions',
+            '2) User input',
+            '3) Context fields (read-only)',
+            '4) Generation rows to fill',
+            '',
+            'Return only valid JSON as an array of objects in generation row order.',
+            'Each object must include: fieldName, value.',
+            'Do not include markdown or explanations.',
+        ].join('\n');
+
+        const globalPromptText = (config.globalPrompt || '').trim();
+        const globalPromptSection = globalPromptText !== '' ? globalPromptText : '(none)';
+        const userPromptSection = userPrompt !== '' ? userPrompt : '(none)';
+        const contextJson = JSON.stringify(activeContextRows, null, 2);
+        const rowsJson = JSON.stringify(activeRows, null, 2);
+
+        previewOutput.value = [
+            'SYSTEM INSTRUCTION',
+            instruction,
+            '',
+            'GLOBAL PROMPT',
+            globalPromptSection,
+            '',
+            'USER INPUT',
+            userPromptSection,
+            '',
+            'CONTEXT_FIELDS_JSON',
+            contextJson,
+            '',
+            'GENERATION_ROWS_JSON',
+            rowsJson,
+            '',
+            'RESPONSE_FORMAT_JSON',
+            '[{"fieldName":"Example Field","value":"..."}]',
+        ].join('\n');
+    });
+
+    if (
+        parseResponseButton instanceof HTMLButtonElement &&
+        responseInput instanceof HTMLTextAreaElement
+    ) {
+        parseResponseButton.addEventListener('click', () => {
+            try {
+                const parsed = parseJsonFromInput(responseInput.value);
+                if (!Array.isArray(parsed)) {
+                    throw new Error('Response must be a JSON array.');
+                }
+
+                suggestions = parsed
+                    .filter((item) => item && typeof item === 'object')
+                    .map((item) => {
+                        const fieldName = String(item.fieldName ?? '').trim();
+                        const value = item.value ?? '';
+                        const match = targetFieldMap.get(normalizeName(fieldName));
+                        return {
+                            fieldName,
+                            value,
+                            matchedHandle: match?.handle || '',
+                        };
+                    })
+                    .filter((item) => item.fieldName !== '');
+
+                currentIndex = 0;
+                renderCurrentSuggestion();
+            } catch (error) {
+                suggestions = [];
+                currentIndex = 0;
+                teardownModal();
+                window.alert(`Could not parse response JSON: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
+        });
+    }
+
+    document.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement) || !(modalState.modal instanceof HTMLElement)) {
+            return;
+        }
+
+        if (target === modalState.backdrop || target.matches('[data-autofill-close]')) {
+            teardownModal();
+            return;
+        }
+
+        if (target.matches('[data-autofill-accept]')) {
+            if (!suggestions.length || !(modalState.value instanceof HTMLTextAreaElement)) {
+                return;
+            }
+            const current = suggestions[currentIndex];
+            current.value = modalState.value.value;
+            if (current.matchedHandle) {
+                applySuggestionValue(current.matchedHandle, current.value);
+            }
+            if (currentIndex < suggestions.length - 1) {
+                currentIndex += 1;
+                renderCurrentSuggestion();
+            } else {
+                teardownModal();
+            }
+            return;
+        }
+
+        if (target.matches('[data-autofill-reject]')) {
+            if (!suggestions.length) {
+                return;
+            }
+            if (currentIndex < suggestions.length - 1) {
+                currentIndex += 1;
+                renderCurrentSuggestion();
+            } else {
+                teardownModal();
+            }
+            return;
+        }
+
+        if (target.matches('[data-autofill-prev]')) {
+            if (!suggestions.length) {
+                return;
+            }
+            currentIndex = Math.max(0, currentIndex - 1);
+            renderCurrentSuggestion();
+            return;
+        }
+
+        if (target.matches('[data-autofill-next]')) {
+            if (!suggestions.length) {
+                return;
+            }
+            currentIndex = Math.min(suggestions.length - 1, currentIndex + 1);
+            renderCurrentSuggestion();
+        }
+    });
+})();

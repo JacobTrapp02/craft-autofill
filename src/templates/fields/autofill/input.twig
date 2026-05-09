@@ -1,11 +1,13 @@
 {% set contextValueByUid = {} %}
 {% set fieldNameByUid = {} %}
+{% set fieldHandleByUid = {} %}
 
 {% if element and element.getFieldLayout() %}
     {% for layoutField in element.getFieldLayout().getCustomFields() %}
         {% set fieldUid = layoutField.uid ?? '' %}
         {% if fieldUid %}
             {% set fieldNameByUid = fieldNameByUid|merge({ (fieldUid): layoutField.name ?? fieldUid }) %}
+            {% set fieldHandleByUid = fieldHandleByUid|merge({ (fieldUid): layoutField.handle ?? '' }) %}
 
             {% set rawValue = element.getFieldValue(layoutField.handle ?? '') %}
             {% if rawValue is same as(null) %}
@@ -28,6 +30,7 @@
     rows: field.rows ?? [],
     contextRows: field.contextRows ?? [],
     fieldNameByUid: fieldNameByUid,
+    fieldHandleByUid: fieldHandleByUid,
     fieldContractsByUid: fieldContractsByUid ?? {},
     contextValueByUid: contextValueByUid,
 } %}
@@ -63,82 +66,69 @@
             <textarea class="text fullwidth code" rows="16" readonly data-autofill-preview placeholder="Preview appears here after clicking Generate."></textarea>
         </div>
     </div>
+
+    <div class="field">
+        <div class="heading">
+            <label for="autofill-response-input-{{ field.handle }}">Test Response Input</label>
+            <div class="instructions">
+                <p>Paste AI JSON response here, then click Parse + Start Review.</p>
+            </div>
+        </div>
+        <div class="input ltr">
+            <textarea
+                id="autofill-response-input-{{ field.handle }}"
+                class="text fullwidth code"
+                rows="8"
+                data-autofill-response-input
+                placeholder='[{"fieldName":"Phone Number","value":"555-123-4567"}]'
+            ></textarea>
+        </div>
+    </div>
+
+    <div class="buttons">
+        <button type="button" class="btn" data-autofill-parse-response>Parse + Start Review</button>
+    </div>
+
 </div>
 
+{% css %}
+.autofill-review-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 9998;
+}
+
+.autofill-review-modal {
+    position: fixed;
+    top: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(640px, calc(100vw - 32px));
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    z-index: 9999;
+    padding: 14px;
+}
+
+.autofill-review-modal .heading {
+    margin-bottom: 8px;
+}
+
+.autofill-review-modal .input textarea {
+    min-height: 84px;
+}
+
+.autofill-review-modal .buttons {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+{% endcss %}
+
 {% js %}
-(() => {
-    const root = document.querySelector('[data-autofill-runtime]');
-    if (!root) {
-        return;
-    }
-
-    const generateButton = root.querySelector('[data-autofill-generate]');
-    const userPromptInput = root.querySelector('[data-autofill-user-prompt]');
-    const previewOutput = root.querySelector('[data-autofill-preview]');
-    if (!(generateButton instanceof HTMLButtonElement) || !(userPromptInput instanceof HTMLTextAreaElement) || !(previewOutput instanceof HTMLTextAreaElement)) {
-        return;
-    }
-
-    const config = {{ previewConfig|json_encode|raw }};
-
-    generateButton.addEventListener('click', () => {
-        const userPrompt = userPromptInput.value.trim();
-
-        const activeRows = (config.rows || [])
-            .filter((row) => row && row.enabled !== false)
-            .map((row) => ({
-                targetFieldName: config.fieldNameByUid?.[row.targetFieldUid] || row.targetFieldUid || '',
-                fieldContract: config.fieldContractsByUid?.[row.targetFieldUid] || {},
-                prompt: row.prompt || '',
-            }));
-
-        const activeContextRows = (config.contextRows || [])
-            .filter((row) => row && row.enabled !== false)
-            .map((row) => ({
-                fieldName: config.fieldNameByUid?.[row.fieldUid] || row.fieldUid || '',
-                fieldContract: config.fieldContractsByUid?.[row.fieldUid] || {},
-                contextPrompt: row.prompt || '',
-                value: config.contextValueByUid?.[row.fieldUid] || '',
-            }));
-
-        const instruction = [
-            'You are filling structured content fields.',
-            'You will receive:',
-            '1) Global instructions',
-            '2) User input',
-            '3) Context fields (read-only)',
-            '4) Generation rows to fill',
-            '',
-            'Return only valid JSON as an array of objects in generation row order.',
-            'Each object must include: fieldName, value.',
-            'Do not include markdown or explanations.',
-        ].join('\n');
-
-        const globalPromptText = (config.globalPrompt || '').trim();
-        const globalPromptSection = globalPromptText !== '' ? globalPromptText : '(none)';
-        const userPromptSection = userPrompt !== '' ? userPrompt : '(none)';
-        const contextJson = JSON.stringify(activeContextRows, null, 2);
-        const rowsJson = JSON.stringify(activeRows, null, 2);
-
-        previewOutput.value = [
-            'SYSTEM INSTRUCTION',
-            instruction,
-            '',
-            'GLOBAL PROMPT',
-            globalPromptSection,
-            '',
-            'USER INPUT',
-            userPromptSection,
-            '',
-            'CONTEXT_FIELDS_JSON',
-            contextJson,
-            '',
-            'GENERATION_ROWS_JSON',
-            rowsJson,
-            '',
-            'RESPONSE_FORMAT_JSON',
-            '[{"fieldName":"Example Field","value":"..."}]',
-        ].join('\n');
-    });
-})();
+window.__autofillPreviewConfig = {{ previewConfig|json_encode|raw }};
+{% include 'autofill/fields/autofill/assets/_input-runtime.js.twig' %}
 {% endjs %}

@@ -16,6 +16,7 @@
     const fieldTypeByUid = {{ supportedFieldTypeMap|json_encode|raw }};
     const allFieldOptions = {{ supportedFieldOptions|json_encode|raw }};
     const hasSelectize = !!(window.jQuery && window.jQuery.fn && window.jQuery.fn.selectize);
+    let isRefreshingOptions = false;
 
     const formatFieldType = (raw) => {
         if (!raw) {
@@ -87,6 +88,9 @@
                 refreshTargetMeta(row);
             },
             onChange() {
+                if (isRefreshingOptions) {
+                    return;
+                }
                 refreshTargetMeta(row);
                 refreshSelectableFieldOptions();
             },
@@ -101,6 +105,9 @@
                 refreshContextMeta(row);
             },
             onChange() {
+                if (isRefreshingOptions) {
+                    return;
+                }
                 refreshContextMeta(row);
                 refreshSelectableFieldOptions();
             },
@@ -114,57 +121,66 @@
     ]);
 
     const refreshSelectableFieldOptions = () => {
+        if (isRefreshingOptions) {
+            return;
+        }
+        isRefreshingOptions = true;
+
         const selects = getManagedFieldSelects();
         const selectedValues = selects
             .map((select) => String(select.value || '').trim())
             .filter((value) => value !== '');
 
-        selects.forEach((select) => {
-            const ownValue = String(select.value || '').trim();
-            const blockedValues = new Set(selectedValues.filter((value) => value !== ownValue));
-            const nextOptions = allFieldOptions.filter((option) => {
-                const value = String(option.value || '').trim();
-                if (value === '' || value === ownValue) {
-                    return true;
-                }
-                return !blockedValues.has(value);
-            });
-
-            if (hasSelectize) {
-                const selectize = window.jQuery(select)[0]?.selectize;
-                if (selectize) {
-                    selectize.clearOptions();
-                    nextOptions.forEach((option) => {
-                        const optionValue = String(option.value || '');
-                        selectize.addOption({
-                            value: optionValue,
-                            text: option.label || optionValue,
-                            fieldType: option.fieldType || '',
-                        });
-                    });
-                    selectize.refreshOptions(false);
-                    if (ownValue && nextOptions.some((option) => String(option.value || '') === ownValue)) {
-                        selectize.setValue(ownValue, true);
-                    } else {
-                        selectize.setValue('', true);
+        try {
+            selects.forEach((select) => {
+                const ownValue = String(select.value || '').trim();
+                const blockedValues = new Set(selectedValues.filter((value) => value !== ownValue));
+                const nextOptions = allFieldOptions.filter((option) => {
+                    const value = String(option.value || '').trim();
+                    if (value === '' || value === ownValue) {
+                        return true;
                     }
-                }
-            } else {
-                select.innerHTML = '';
-                nextOptions.forEach((option) => {
-                    const opt = document.createElement('option');
-                    opt.value = String(option.value || '');
-                    opt.textContent = option.label || opt.value;
-                    if (option.fieldType) {
-                        opt.dataset.fieldType = String(option.fieldType);
-                    }
-                    if (opt.value === ownValue) {
-                        opt.selected = true;
-                    }
-                    select.appendChild(opt);
+                    return !blockedValues.has(value);
                 });
-            }
-        });
+
+                if (hasSelectize) {
+                    const selectize = window.jQuery(select)[0]?.selectize;
+                    if (selectize) {
+                        selectize.clearOptions();
+                        nextOptions.forEach((option) => {
+                            const optionValue = String(option.value || '');
+                            selectize.addOption({
+                                value: optionValue,
+                                text: option.label || optionValue,
+                                fieldType: option.fieldType || '',
+                            });
+                        });
+                        selectize.refreshOptions(false);
+                        if (ownValue && nextOptions.some((option) => String(option.value || '') === ownValue)) {
+                            selectize.setValue(ownValue, true);
+                        } else {
+                            selectize.setValue('', true);
+                        }
+                    }
+                } else {
+                    select.innerHTML = '';
+                    nextOptions.forEach((option) => {
+                        const opt = document.createElement('option');
+                        opt.value = String(option.value || '');
+                        opt.textContent = option.label || opt.value;
+                        if (option.fieldType) {
+                            opt.dataset.fieldType = String(option.fieldType);
+                        }
+                        if (opt.value === ownValue) {
+                            opt.selected = true;
+                        }
+                        select.appendChild(opt);
+                    });
+                }
+            });
+        } finally {
+            isRefreshingOptions = false;
+        }
 
         container.querySelectorAll('[data-row]').forEach((row) => refreshTargetMeta(row));
         contextContainer?.querySelectorAll('[data-context-row]').forEach((row) => refreshContextMeta(row));
