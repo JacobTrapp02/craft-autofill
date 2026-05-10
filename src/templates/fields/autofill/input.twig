@@ -1,6 +1,6 @@
-{% set contextValueByUid = {} %}
-{% set fieldNameByUid = {} %}
-{% set fieldHandleByUid = {} %}
+{% set contextValueByUid = prefilledContextValueByUid ?? {} %}
+{% set fieldNameByUid = prefilledFieldNameByUid ?? {} %}
+{% set fieldHandleByUid = prefilledFieldHandleByUid ?? {} %}
 
 {% if element and element.getFieldLayout() %}
     {% for layoutField in element.getFieldLayout().getCustomFields() %}
@@ -12,10 +12,16 @@
             {% set rawValue = element.getFieldValue(layoutField.handle ?? '') %}
             {% if rawValue is same as(null) %}
                 {% set resolvedValue = '' %}
-            {% elseif rawValue is iterable and rawValue is not same as('') %}
-                {% set resolvedValue = rawValue|json_encode %}
             {% elseif rawValue is object %}
-                {% set resolvedValue = rawValue|json_encode %}
+                {% if rawValue is instance of('Money\\Money') %}
+                    {% set resolvedValue = rawValue.getAmount() ~ ' ' ~ rawValue.getCurrency().getCode() %}
+                {% elseif rawValue is instance of('Stringable') %}
+                    {% set resolvedValue = rawValue ~ '' %}
+                {% else %}
+                    {% set resolvedValue = rawValue|json_encode %}
+                {% endif %}
+            {% elseif rawValue is iterable and rawValue is not same as('') %}
+                {% set resolvedValue = rawValue|join(', ') %}
             {% else %}
                 {% set resolvedValue = rawValue ~ '' %}
             {% endif %}
@@ -125,6 +131,22 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+}
+
+.autofill-focus-highlight {
+    position: relative;
+    border-radius: 6px;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.95), 0 0 0 6px rgba(59, 130, 246, 0.20);
+    animation: autofillPulse 1.1s ease-out;
+}
+
+@keyframes autofillPulse {
+    0% {
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 1), 0 0 0 10px rgba(59, 130, 246, 0.30);
+    }
+    100% {
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.95), 0 0 0 6px rgba(59, 130, 246, 0.20);
+    }
 }
 {% endcss %}
 

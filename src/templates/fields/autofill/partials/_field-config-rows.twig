@@ -15,7 +15,7 @@
                     row: row,
                     rowId: 'row-' ~ loop.index0,
                     supportedFieldOptions: supportedFieldOptions,
-                    showAdvancedByDefault: not (row.requiresApproval ?? true) or not (row.enabled ?? true),
+                    showAdvancedByDefault: not (row.requiresApproval ?? true) or not (row.includeCurrentFieldValue ?? true) or not (row.overrideCurrentValue ?? true) or not (row.enabled ?? true),
                 } only %}
             {% endfor %}
         </div>
@@ -40,6 +40,8 @@
             targetFieldUid: '',
             prompt: '',
             requiresApproval: true,
+            includeCurrentFieldValue: true,
+            overrideCurrentValue: true,
             enabled: true,
         },
         rowId: '__INDEX__',

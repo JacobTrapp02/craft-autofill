@@ -15,6 +15,28 @@
 
     const config = window.__autofillPreviewConfig || {};
     const normalizeName = (value) => String(value || '').trim().toLowerCase();
+    const HIGHLIGHT_CLASS = 'autofill-focus-highlight';
+    let highlightedAnchor = null;
+    let highlightTimer = null;
+    const asBool = (value, defaultValue = true) => {
+        if (value === null || typeof value === 'undefined' || value === '') {
+            return defaultValue;
+        }
+        if (typeof value === 'boolean') {
+            return value;
+        }
+        if (typeof value === 'number') {
+            return value !== 0;
+        }
+        const normalized = String(value).trim().toLowerCase();
+        if (['0', 'false', 'off', 'no'].includes(normalized)) {
+            return false;
+        }
+        if (['1', 'true', 'on', 'yes'].includes(normalized)) {
+            return true;
+        }
+        return defaultValue;
+    };
     const targetFieldMap = new Map();
     (config.rows || [])
         .filter((row) => row && row.enabled !== false)
@@ -27,6 +49,9 @@
             targetFieldMap.set(normalizeName(name), {
                 name,
                 handle,
+                requiresApproval: asBool(row.requiresApproval, true),
+                includeCurrentFieldValue: asBool(row.includeCurrentFieldValue, true),
+                overrideCurrentValue: asBool(row.overrideCurrentValue, true),
             });
         });
 
@@ -47,24 +72,145 @@
         }
     };
 
+    const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+
+    const hasMeaningfulExistingValue = (handle) => {
+        const splitDateTime = findSplitDateTimeInputsByHandle(handle);
+        if (splitDateTime.date || splitDateTime.time) {
+            const dateValue = splitDateTime.date instanceof HTMLInputElement ? String(splitDateTime.date.value || '').trim() : '';
+            const timeValue = splitDateTime.time instanceof HTMLInputElement ? String(splitDateTime.time.value || '').trim() : '';
+            return dateValue !== '' || timeValue !== '';
+        }
+
+        const input = findFieldInputByHandle(handle);
+        if (!(input instanceof HTMLElement)) {
+            return false;
+        }
+
+        if (input instanceof HTMLInputElement && input.type === 'checkbox') {
+            return input.checked;
+        }
+
+        if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement || input instanceof HTMLSelectElement) {
+            return String(input.value || '').trim() !== '';
+        }
+
+        return false;
+    };
+
     const findFieldInputByHandle = (handle) => {
         const escaped = window.CSS && typeof window.CSS.escape === 'function' ? window.CSS.escape(handle) : handle.replace(/"/g, '\\"');
         const base = `[name="fields[${escaped}]"]`;
+        const nativeCandidates = [
+            `textarea[name="${escaped}"]`,
+            `select[name="${escaped}"]`,
+            `input[type="text"][name="${escaped}"]`,
+            `input[type="tel"][name="${escaped}"]`,
+            `input[type="number"][name="${escaped}"]`,
+            `input[type="checkbox"][name="${escaped}"]`,
+            `input[name="${escaped}"]`,
+            `textarea[name^="${escaped}["]`,
+            `select[name^="${escaped}["]`,
+            `input[name^="${escaped}["]`,
+            `#${escaped}`,
+        ];
+        const pickBest = (nodes) => {
+            const list = Array.from(nodes).filter((node) => node instanceof HTMLElement);
+            if (!list.length) {
+                return null;
+            }
+            const visibleEnabled = list.find((node) => {
+                const style = window.getComputedStyle(node);
+                const hidden = style.display === 'none' || style.visibility === 'hidden';
+                const disabled = 'disabled' in node ? Boolean(node.disabled) : false;
+                return !hidden && !disabled;
+            });
+            return visibleEnabled || list[0] || null;
+        };
+
         return (
-            document.querySelector(`textarea${base}`) ||
-            document.querySelector(`input[type="text"]${base}`) ||
-            document.querySelector(`input[type="tel"]${base}`) ||
-            document.querySelector(`input[type="number"]${base}`) ||
-            document.querySelector(`input[type="checkbox"]${base}`) ||
-            document.querySelector(`input${base}`) ||
+            pickBest(document.querySelectorAll(`textarea${base}`)) ||
+            pickBest(document.querySelectorAll(`select${base}`)) ||
+            pickBest(document.querySelectorAll(`input[type="text"]${base}`)) ||
+            pickBest(document.querySelectorAll(`input[type="tel"]${base}`)) ||
+            pickBest(document.querySelectorAll(`input[type="number"]${base}`)) ||
+            pickBest(document.querySelectorAll(`input[type="checkbox"]${base}`)) ||
+            pickBest(document.querySelectorAll(`input${base}`)) ||
+            pickBest(document.querySelectorAll(nativeCandidates.join(', '))) ||
             null
         );
     };
 
+    const findSplitDateTimeInputsByHandle = (handle) => {
+        const escaped = window.CSS && typeof window.CSS.escape === 'function' ? window.CSS.escape(handle) : handle.replace(/"/g, '\\"');
+        const candidates = [
+            {
+                date: `input[name="fields[${escaped}][date]"]`,
+                time: `input[name="fields[${escaped}][time]"]`,
+            },
+            {
+                date: `input[name="${escaped}[date]"]`,
+                time: `input[name="${escaped}[time]"]`,
+            },
+        ];
+
+        for (const pair of candidates) {
+            const dateInput = document.querySelector(pair.date);
+            const timeInput = document.querySelector(pair.time);
+            if (dateInput instanceof HTMLInputElement || timeInput instanceof HTMLInputElement) {
+                return {
+                    date: dateInput instanceof HTMLInputElement ? dateInput : null,
+                    time: timeInput instanceof HTMLInputElement ? timeInput : null,
+                };
+            }
+        }
+
+        return { date: null, time: null };
+    };
+
+    const parseDateTimeParts = (value) => {
+        const raw = String(value ?? '').trim();
+        if (!raw) {
+            return { date: '', time: '' };
+        }
+
+        const isoLike = raw.match(/^(\d{4}-\d{2}-\d{2})(?:[T\s](\d{2}:\d{2})(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?$/);
+        if (isoLike) {
+            return {
+                date: isoLike[1] || '',
+                time: isoLike[2] || '',
+            };
+        }
+
+        const parsed = new Date(raw);
+        if (!Number.isNaN(parsed.getTime())) {
+            const pad = (n) => String(n).padStart(2, '0');
+            return {
+                date: `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}`,
+                time: `${pad(parsed.getHours())}:${pad(parsed.getMinutes())}`,
+            };
+        }
+
+        return { date: raw, time: '' };
+    };
+
     const TOP_VIEWPORT_OFFSET = 96;
 
+    const getInteractionAnchor = (input) => {
+        if (!(input instanceof HTMLElement)) {
+            return input;
+        }
+        return (
+            input.closest('.field') ||
+            input.closest('.input') ||
+            input.closest('.select') ||
+            input
+        );
+    };
+
     const scrollFieldIntoTopView = (input) => {
-        const absoluteTop = input.getBoundingClientRect().top + window.scrollY;
+        const anchor = getInteractionAnchor(input);
+        const absoluteTop = anchor.getBoundingClientRect().top + window.scrollY;
         const targetY = Math.max(0, absoluteTop - TOP_VIEWPORT_OFFSET);
         window.scrollTo({ top: targetY, left: 0, behavior: 'auto' });
     };
@@ -131,11 +277,104 @@
     const prepareInputForInteraction = (input) => {
         activateTabForInput(input);
         scrollFieldIntoTopView(input);
-        input.focus();
+        const anchor = getInteractionAnchor(input);
+        if (highlightedAnchor instanceof HTMLElement) {
+            highlightedAnchor.classList.remove(HIGHLIGHT_CLASS);
+        }
+        if (highlightTimer) {
+            window.clearTimeout(highlightTimer);
+        }
+        if (anchor instanceof HTMLElement) {
+            anchor.classList.add(HIGHLIGHT_CLASS);
+            highlightedAnchor = anchor;
+            highlightTimer = window.setTimeout(() => {
+                if (highlightedAnchor instanceof HTMLElement) {
+                    highlightedAnchor.classList.remove(HIGHLIGHT_CLASS);
+                }
+                highlightedAnchor = null;
+                highlightTimer = null;
+            }, 1800);
+        }
+        if (typeof input.focus === 'function') {
+            input.focus();
+        }
         positionModalBelowField(input);
     };
 
+    const resolveSelectOptionValue = (select, candidate) => {
+        const raw = String(candidate ?? '').trim();
+        if (raw === '') {
+            return '';
+        }
+
+        const direct = Array.from(select.options).find((opt) => String(opt.value) === raw);
+        if (direct) {
+            return direct.value;
+        }
+
+        const byLabel = Array.from(select.options).find((opt) => String(opt.textContent || '').trim().toLowerCase() === raw.toLowerCase());
+        if (byLabel) {
+            return byLabel.value;
+        }
+
+        const numeric = Number(raw);
+        if (!Number.isNaN(numeric)) {
+            const asNumericString = String(numeric);
+            const byNumeric = Array.from(select.options).find((opt) => String(opt.value) === asNumericString);
+            if (byNumeric) {
+                return byNumeric.value;
+            }
+        }
+
+        return raw;
+    };
+
+    const normalizeNumberInputValue = (value) => {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            return String(value);
+        }
+        const raw = String(value ?? '').trim();
+        if (!raw) {
+            return '';
+        }
+
+        // Remove common formatting noise from model output.
+        const cleaned = raw
+            .replace(/,/g, '')
+            .replace(/\s+/g, '')
+            .replace(/[^\d.+-]/g, '');
+
+        if (!cleaned || cleaned === '.' || cleaned === '-' || cleaned === '+') {
+            return '';
+        }
+
+        const parsed = Number(cleaned);
+        return Number.isFinite(parsed) ? String(parsed) : '';
+    };
+
     const applySuggestionValue = (handle, value) => {
+        const splitDateTime = findSplitDateTimeInputsByHandle(handle);
+        if (splitDateTime.date || splitDateTime.time) {
+            const anchorInput = splitDateTime.date || splitDateTime.time;
+            if (anchorInput) {
+                prepareInputForInteraction(anchorInput);
+            }
+
+            const parts = parseDateTimeParts(value);
+            if (splitDateTime.date instanceof HTMLInputElement) {
+                splitDateTime.date.value = parts.date;
+                splitDateTime.date.dispatchEvent(new Event('input', { bubbles: true }));
+                splitDateTime.date.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (splitDateTime.time instanceof HTMLInputElement) {
+                splitDateTime.time.value = parts.time;
+                splitDateTime.time.dispatchEvent(new Event('input', { bubbles: true }));
+                splitDateTime.time.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+
+            return true;
+        }
+
         const input = findFieldInputByHandle(handle);
         if (!(input instanceof HTMLElement)) {
             return false;
@@ -150,8 +389,35 @@
             return true;
         }
 
+        if (input instanceof HTMLSelectElement) {
+            const resolvedOptionValue = resolveSelectOptionValue(input, value);
+            input.value = resolvedOptionValue;
+            for (const option of Array.from(input.options)) {
+                option.selected = String(option.value) === String(resolvedOptionValue);
+            }
+
+            // If Craft enhanced this select with Selectize, use its API to ensure
+            // UI + hidden input state stay in sync for submission.
+            const selectize =
+                input.selectize ||
+                (window.jQuery ? window.jQuery(input).data('selectize') : null);
+            if (selectize && typeof selectize.setValue === 'function') {
+                selectize.setValue(String(resolvedOptionValue), true);
+            }
+
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            // Craft may decorate selects; prompt a UI refresh path too.
+            input.dispatchEvent(new Event('blur', { bubbles: true }));
+            return true;
+        }
+
         if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
-            input.value = String(value ?? '');
+            if (input instanceof HTMLInputElement && input.type === 'number') {
+                input.value = normalizeNumberInputValue(value);
+            } else {
+                input.value = String(value ?? '');
+            }
             input.dispatchEvent(new Event('input', { bubbles: true }));
             input.dispatchEvent(new Event('change', { bubbles: true }));
             return true;
@@ -247,9 +513,10 @@
             return;
         }
 
+        const anchor = getInteractionAnchor(input);
         const gap = 12;
         const viewportPadding = 12;
-        const rect = input.getBoundingClientRect();
+        const rect = anchor.getBoundingClientRect();
         const modalHeight = modalState.modal.offsetHeight || 320;
         const idealTop = rect.bottom + gap;
         const maxTop = window.innerHeight - modalHeight - viewportPadding;
@@ -284,17 +551,38 @@
 
         const activeRows = (config.rows || [])
             .filter((row) => row && row.enabled !== false)
-            .map((row) => ({
-                targetFieldName: config.fieldNameByUid?.[row.targetFieldUid] || row.targetFieldUid || '',
-                fieldContract: config.fieldContractsByUid?.[row.targetFieldUid] || {},
-                prompt: row.prompt || '',
-            }));
+            .map((row) => {
+                const targetFieldUid = row.targetFieldUid || '';
+                const targetFieldName = config.fieldNameByUid?.[targetFieldUid] || targetFieldUid || '';
+                const targetFieldHandle = config.fieldHandleByUid?.[targetFieldUid] || '';
+                const includeCurrentFieldValue = asBool(row.includeCurrentFieldValue, true);
+                const overrideCurrentValue = asBool(row.overrideCurrentValue, true);
+                const currentFieldValue = config.contextValueByUid?.[targetFieldUid] ?? '';
+                const hasCurrentValue = String(currentFieldValue).trim() !== '';
+
+                if (!overrideCurrentValue && targetFieldHandle && hasCurrentValue) {
+                    return null;
+                }
+
+                const payload = {
+                    targetFieldName,
+                    fieldContract: config.fieldContractsByUid?.[targetFieldUid] || {},
+                    prompt: row.prompt || '',
+                };
+
+                if (includeCurrentFieldValue && hasCurrentValue) {
+                    payload.currentFieldValue = currentFieldValue;
+                }
+
+                return payload;
+            })
+            .filter((row) => row !== null);
 
         const activeContextRows = (config.contextRows || [])
             .filter((row) => row && row.enabled !== false)
             .map((row) => ({
                 fieldName: config.fieldNameByUid?.[row.fieldUid] || row.fieldUid || '',
-                fieldContract: config.fieldContractsByUid?.[row.fieldUid] || {},
+                fieldType: config.fieldContractsByUid?.[row.fieldUid]?.type || '',
                 contextPrompt: row.prompt || '',
                 value: config.contextValueByUid?.[row.fieldUid] || '',
             }));
@@ -354,18 +642,47 @@
                     .filter((item) => item && typeof item === 'object')
                     .map((item) => {
                         const fieldName = String(item.fieldName ?? '').trim();
-                        const value = item.value ?? '';
+                        const hasRawValue = hasOwn(item, 'value');
+                        const valueIsNull = hasRawValue && item.value === null;
+                        const value = hasRawValue && item.value !== null ? item.value : '';
                         const match = targetFieldMap.get(normalizeName(fieldName));
                         return {
                             fieldName,
                             value,
+                            hasRawValue,
+                            valueIsNull,
                             matchedHandle: match?.handle || '',
+                            requiresApproval: asBool(match?.requiresApproval, true),
+                            overrideCurrentValue: asBool(match?.overrideCurrentValue, true),
                         };
                     })
                     .filter((item) => item.fieldName !== '');
 
+                // Auto-apply rows that do not require editor approval.
+                const reviewRequired = [];
+                suggestions.forEach((item) => {
+                    if (item.matchedHandle && item.overrideCurrentValue === false && hasMeaningfulExistingValue(item.matchedHandle)) {
+                        return;
+                    }
+                    const normalizedValue = String(item.value ?? '').trim();
+                    const missingNullOrEmptyValue = !item.hasRawValue || item.valueIsNull || normalizedValue === '';
+                    if (item.matchedHandle && item.requiresApproval === false && missingNullOrEmptyValue && hasMeaningfulExistingValue(item.matchedHandle)) {
+                        return;
+                    }
+                    if (item.matchedHandle && item.requiresApproval === false) {
+                        applySuggestionValue(item.matchedHandle, item.value);
+                        return;
+                    }
+                    reviewRequired.push(item);
+                });
+
+                suggestions = reviewRequired;
                 currentIndex = 0;
-                renderCurrentSuggestion();
+                if (suggestions.length) {
+                    renderCurrentSuggestion();
+                } else {
+                    teardownModal();
+                }
             } catch (error) {
                 suggestions = [];
                 currentIndex = 0;

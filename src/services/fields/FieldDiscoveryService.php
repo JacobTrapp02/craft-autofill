@@ -10,6 +10,49 @@ use jtdev\craftautofill\AutofillPlugin;
 
 class FieldDiscoveryService extends Component
 {
+    private const NATIVE_ENTRY_FIELDS = [
+        [
+            'uid' => '__native__:title',
+            'handle' => 'title',
+            'name' => 'Title',
+            'type' => 'craft\\base\\Element::title',
+            'adapter' => 'plainText',
+            'availableInFreeVersion' => true,
+        ],
+        [
+            'uid' => '__native__:slug',
+            'handle' => 'slug',
+            'name' => 'Slug',
+            'type' => 'craft\\base\\Element::slug',
+            'adapter' => 'plainText',
+            'availableInFreeVersion' => true,
+        ],
+        [
+            'uid' => '__native__:postDate',
+            'handle' => 'postDate',
+            'name' => 'Post Date',
+            'type' => 'craft\\elements\\Entry::postDate',
+            'adapter' => 'date',
+            'availableInFreeVersion' => true,
+        ],
+        [
+            'uid' => '__native__:expiryDate',
+            'handle' => 'expiryDate',
+            'name' => 'Expiration Date',
+            'type' => 'craft\\elements\\Entry::expiryDate',
+            'adapter' => 'date',
+            'availableInFreeVersion' => true,
+        ],
+        [
+            'uid' => '__native__:enabled',
+            'handle' => 'enabled',
+            'name' => 'Enabled',
+            'type' => 'craft\\base\\Element::enabled',
+            'adapter' => 'lightswitch',
+            'availableInFreeVersion' => true,
+        ],
+    ];
+
     public FieldAdapterService $fieldAdapterService;
 
     public function init(): void
@@ -27,7 +70,7 @@ class FieldDiscoveryService extends Component
     {
         $fieldLayout = $entryType->getFieldLayout();
         if ($fieldLayout === null) {
-            return [];
+            return self::NATIVE_ENTRY_FIELDS;
         }
 
         $supported = [];
@@ -48,6 +91,6 @@ class FieldDiscoveryService extends Component
             ];
         }
 
-        return $supported;
+        return array_merge(self::NATIVE_ENTRY_FIELDS, $supported);
     }
 }

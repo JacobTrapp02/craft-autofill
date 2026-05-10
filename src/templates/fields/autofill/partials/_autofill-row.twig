@@ -48,6 +48,16 @@
                             Requires Editor Approval
                         </label>
                         <label class="checkbox-label">
+                            <input type="hidden" name="rows[{{ rowId }}][includeCurrentFieldValue]" value="0">
+                            <input type="checkbox" name="rows[{{ rowId }}][includeCurrentFieldValue]" value="1"{% if row.includeCurrentFieldValue ?? true %} checked{% endif %}>
+                            Include Current Field Value In Prompt
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="hidden" name="rows[{{ rowId }}][overrideCurrentValue]" value="0">
+                            <input type="checkbox" name="rows[{{ rowId }}][overrideCurrentValue]" value="1"{% if row.overrideCurrentValue ?? true %} checked{% endif %}>
+                            Override Current Value
+                        </label>
+                        <label class="checkbox-label">
                             <input type="hidden" name="rows[{{ rowId }}][enabled]" value="0">
                             <input type="checkbox" name="rows[{{ rowId }}][enabled]" value="1"{% if row.enabled ?? true %} checked{% endif %}>
                             Row Enabled

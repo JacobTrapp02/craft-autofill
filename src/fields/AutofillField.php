@@ -95,6 +95,38 @@ class AutofillField extends Field
     protected function inputHtml(mixed $value, ?ElementInterface $element, bool $inline): string
     {
         $fieldContractsByUid = [];
+        $fieldNameByUid = [];
+        $fieldHandleByUid = [];
+        $contextValueByUid = [];
+
+        if ($element) {
+            $nativeFields = [
+                '__native__:title' => ['name' => 'Title', 'handle' => 'title', 'type' => 'string'],
+                '__native__:slug' => ['name' => 'Slug', 'handle' => 'slug', 'type' => 'string'],
+                '__native__:postDate' => ['name' => 'Post Date', 'handle' => 'postDate', 'type' => 'string'],
+                '__native__:expiryDate' => ['name' => 'Expiration Date', 'handle' => 'expiryDate', 'type' => 'string'],
+                '__native__:enabled' => ['name' => 'Enabled', 'handle' => 'enabled', 'type' => 'boolean'],
+            ];
+
+            foreach ($nativeFields as $uid => $meta) {
+                $handle = $meta['handle'];
+                $rawValue = $element->$handle ?? null;
+                if ($rawValue instanceof \DateTimeInterface) {
+                    $resolvedValue = $rawValue->format(\DateTimeInterface::ATOM);
+                } elseif (is_bool($rawValue)) {
+                    $resolvedValue = $rawValue ? 'true' : 'false';
+                } elseif ($rawValue === null) {
+                    $resolvedValue = '';
+                } else {
+                    $resolvedValue = trim((string)$rawValue);
+                }
+
+                $fieldNameByUid[$uid] = $meta['name'];
+                $fieldHandleByUid[$uid] = $handle;
+                $contextValueByUid[$uid] = $resolvedValue;
+                $fieldContractsByUid[$uid] = ['type' => $meta['type']];
+            }
+        }
 
         if ($element?->getFieldLayout()) {
             $adapterService = AutofillPlugin::getInstance()->fieldAdapterService;
@@ -110,6 +142,8 @@ class AutofillField extends Field
                 }
 
                 $fieldContractsByUid[$uid] = $adapter->buildPromptContract($layoutField);
+                $fieldNameByUid[$uid] = (string)($layoutField->name ?? $uid);
+                $fieldHandleByUid[$uid] = (string)($layoutField->handle ?? '');
             }
         }
 
@@ -117,6 +151,9 @@ class AutofillField extends Field
             'field' => $this,
             'element' => $element,
             'fieldContractsByUid' => $fieldContractsByUid,
+            'prefilledFieldNameByUid' => $fieldNameByUid,
+            'prefilledFieldHandleByUid' => $fieldHandleByUid,
+            'prefilledContextValueByUid' => $contextValueByUid,
         ]);
     }
 
@@ -245,6 +282,8 @@ class AutofillField extends Field
             $targetFieldUid = trim((string)($row['targetFieldUid'] ?? ''));
             $prompt = trim((string)($row['prompt'] ?? ''));
             $requiresApproval = $this->toBool($row['requiresApproval'] ?? true);
+            $includeCurrentFieldValue = $this->toBool($row['includeCurrentFieldValue'] ?? true);
+            $overrideCurrentValue = $this->toBool($row['overrideCurrentValue'] ?? true);
             $enabled = $this->toBool($row['enabled'] ?? true);
 
             $hasMeaningfulInput = $targetFieldUid !== '' || $prompt !== '';
@@ -256,6 +295,8 @@ class AutofillField extends Field
                 'targetFieldUid' => $targetFieldUid,
                 'prompt' => $prompt,
                 'requiresApproval' => $requiresApproval,
+                'includeCurrentFieldValue' => $includeCurrentFieldValue,
+                'overrideCurrentValue' => $overrideCurrentValue,
                 'enabled' => $enabled,
             ];
         }
