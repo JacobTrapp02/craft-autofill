@@ -7,11 +7,11 @@ use craft\base\Model;
 use craft\base\Plugin;
 use craft\events\RegisterComponentTypesEvent;
 use craft\services\Fields;
+use jtdev\craftautofill\fields\AutofillField;
 use jtdev\craftautofill\models\Settings;
 use jtdev\craftautofill\services\ai\AiService;
 use jtdev\craftautofill\services\fields\FieldAdapterService;
 use jtdev\craftautofill\services\fields\FieldDiscoveryService;
-use jtdev\craftautofill\fields\AutofillField;
 use yii\base\Event;
 
 /**
@@ -66,6 +66,21 @@ class AutofillPlugin extends Plugin
             'plugin' => $this,
             'settings' => $this->getSettings(),
         ]);
+    }
+
+    public function getAiService(): AiService
+    {
+        return $this->get('aiService');
+    }
+
+    public function getFieldAdapterService(): FieldAdapterService
+    {
+        return $this->get('fieldAdapterService');
+    }
+
+    public function getFieldDiscoveryService(): FieldDiscoveryService
+    {
+        return $this->get('fieldDiscoveryService');
     }
 
     private function attachEventHandlers(): void

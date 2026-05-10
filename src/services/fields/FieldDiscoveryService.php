@@ -58,7 +58,7 @@ class FieldDiscoveryService extends Component
     public function init(): void
     {
         parent::init();
-        $this->fieldAdapterService ??= AutofillPlugin::getInstance()->fieldAdapterService;
+        $this->fieldAdapterService ??= AutofillPlugin::getInstance()->getFieldAdapterService();
     }
 
     /**

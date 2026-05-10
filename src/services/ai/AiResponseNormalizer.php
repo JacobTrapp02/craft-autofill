@@ -4,13 +4,27 @@ declare(strict_types=1);
 
 namespace jtdev\craftautofill\services\ai;
 
+use Craft;
 use craft\base\Component;
+use craft\base\FieldInterface;
 use craft\helpers\Json;
+use jtdev\craftautofill\AutofillPlugin;
 use jtdev\craftautofill\models\ai\AiGenerationRequest;
 use jtdev\craftautofill\models\ai\AiGenerationResult;
+use Throwable;
+use yii\base\InvalidArgumentException;
 
 class AiResponseNormalizer extends Component
 {
+    public AutofillFieldConfigBuilder $fieldConfigBuilder;
+
+    public function init(): void
+    {
+        parent::init();
+
+        $this->fieldConfigBuilder ??= new AutofillFieldConfigBuilder();
+    }
+
     public function normalize(array $rawResponse, AiGenerationRequest $request): AiGenerationResult
     {
         $text = $this->extractText($rawResponse);
@@ -47,6 +61,79 @@ class AiResponseNormalizer extends Component
         }
 
         return $result;
+    }
+
+    public function normalizeAutofillResponse(string $rawResponse, int $fieldId): AiGenerationResult
+    {
+        try {
+            $parsed = $this->parseSuggestionJson($rawResponse);
+            $config = $this->fieldConfigBuilder->buildFromFieldId($fieldId);
+        } catch (InvalidArgumentException $exception) {
+            return new AiGenerationResult([
+                'success' => false,
+                'suggestions' => [],
+                'error' => $exception->getMessage(),
+            ]);
+        } catch (Throwable $exception) {
+            Craft::error($exception->getMessage(), __METHOD__);
+
+            return new AiGenerationResult([
+                'success' => false,
+                'suggestions' => [],
+                'error' => 'Could not load Autofill field configuration.',
+            ]);
+        }
+
+        $suggestions = [];
+        $targetFieldMap = $this->buildTargetFieldMap($config);
+
+        foreach ($parsed as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $fieldName = trim((string)($item['fieldName'] ?? ''));
+            if ($fieldName === '') {
+                continue;
+            }
+
+            $hasRawValue = array_key_exists('value', $item);
+            $valueIsNull = $hasRawValue && $item['value'] === null;
+            $rawValue = $hasRawValue && !$valueIsNull ? $item['value'] : '';
+            $match = $targetFieldMap[$this->normalizeName($fieldName)] ?? null;
+            $targetFieldUid = (string)($match['targetFieldUid'] ?? '');
+            $fieldContract = is_array($match['fieldContract'] ?? null) ? $match['fieldContract'] : [];
+            $validationErrors = [];
+
+            if (!$hasRawValue) {
+                $validationErrors[] = 'Suggestion is missing a value.';
+            } elseif ($valueIsNull) {
+                $validationErrors[] = 'Suggestion value cannot be null.';
+            }
+
+            $value = $this->normalizeSuggestionValue($targetFieldUid, $rawValue, $fieldContract);
+            $validationErrors = array_merge(
+                $validationErrors,
+                $this->validateSuggestionValue($targetFieldUid, $rawValue, $value, $fieldContract)
+            );
+
+            $suggestions[] = [
+                'fieldName' => $fieldName,
+                'value' => $value,
+                'hasRawValue' => $hasRawValue,
+                'valueIsNull' => $valueIsNull,
+                'matchedHandle' => (string)($match['handle'] ?? ''),
+                'requiresApproval' => $this->asBool($match['requiresApproval'] ?? true),
+                'overrideCurrentValue' => $this->asBool($match['overrideCurrentValue'] ?? true),
+                'validationErrors' => array_values(array_unique($validationErrors)),
+            ];
+        }
+
+        return new AiGenerationResult([
+            'success' => true,
+            'suggestions' => $suggestions,
+            'error' => null,
+        ]);
     }
 
     private function extractText(array $rawResponse): ?string
@@ -93,5 +180,264 @@ class AiResponseNormalizer extends Component
         }
 
         return null;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function parseSuggestionJson(string $rawResponse): array
+    {
+        $text = trim($rawResponse);
+        if ($text === '') {
+            throw new InvalidArgumentException('Response cannot be empty.');
+        }
+
+        $parsed = Json::decodeIfJson($text);
+        if (!is_array($parsed)) {
+            $start = strpos($text, '[');
+            $end = strrpos($text, ']');
+
+            if ($start !== false && $end !== false && $end > $start) {
+                $parsed = Json::decode(substr($text, $start, $end - $start + 1));
+            }
+        }
+
+        if (!is_array($parsed)) {
+            throw new InvalidArgumentException('Response must be valid JSON.');
+        }
+
+        if (array_is_list($parsed)) {
+            return $parsed;
+        }
+
+        $suggestions = $parsed['suggestions'] ?? null;
+        if (is_array($suggestions) && array_is_list($suggestions)) {
+            return $suggestions;
+        }
+
+        throw new InvalidArgumentException('Response must be a JSON array or an object with a suggestions array.');
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function buildTargetFieldMap(array $config): array
+    {
+        $map = [];
+
+        foreach (($config['rows'] ?? []) as $row) {
+            if (!is_array($row) || ($row['enabled'] ?? true) === false) {
+                continue;
+            }
+
+            $targetFieldUid = (string)($row['targetFieldUid'] ?? '');
+            $name = (string)($config['fieldNameByUid'][$targetFieldUid] ?? $targetFieldUid);
+            $handle = (string)($config['fieldHandleByUid'][$targetFieldUid] ?? '');
+
+            if ($name === '' || $handle === '') {
+                continue;
+            }
+
+            $map[$this->normalizeName($name)] = [
+                'targetFieldUid' => $targetFieldUid,
+                'name' => $name,
+                'handle' => $handle,
+                'requiresApproval' => $row['requiresApproval'] ?? true,
+                'overrideCurrentValue' => $row['overrideCurrentValue'] ?? true,
+                'fieldContract' => $config['fieldContractsByUid'][$targetFieldUid] ?? [],
+            ];
+        }
+
+        return $map;
+    }
+
+    private function normalizeSuggestionValue(string $fieldUid, mixed $value, array $fieldContract): mixed
+    {
+        $field = $this->getCustomField($fieldUid);
+        if ($field instanceof FieldInterface) {
+            $adapter = AutofillPlugin::getInstance()->getFieldAdapterService()->getAdapterForField($field);
+            if ($adapter !== null) {
+                try {
+                    return $adapter->normalizeSuggestion($field, $value);
+                } catch (Throwable) {
+                    return '';
+                }
+            }
+        }
+
+        return $this->normalizeByContract($value, $fieldContract);
+    }
+
+    /**
+     * @return string[]
+     */
+    private function validateSuggestionValue(string $fieldUid, mixed $rawValue, mixed $normalizedValue, array $fieldContract): array
+    {
+        $errors = [];
+        $field = $this->getCustomField($fieldUid);
+
+        if ($field instanceof FieldInterface) {
+            $adapter = AutofillPlugin::getInstance()->getFieldAdapterService()->getAdapterForField($field);
+            if ($adapter !== null && !$adapter->validateSuggestion($field, $normalizedValue)) {
+                $errors[] = 'Suggestion value is not valid for this field type.';
+            }
+        }
+
+        return array_merge($errors, $this->validateByContract($rawValue, $normalizedValue, $fieldContract));
+    }
+
+    private function getCustomField(string $fieldUid): ?FieldInterface
+    {
+        if ($fieldUid === '' || str_starts_with($fieldUid, '__native__:')) {
+            return null;
+        }
+
+        return Craft::$app->getFields()->getFieldByUid($fieldUid);
+    }
+
+    private function normalizeByContract(mixed $value, array $fieldContract): mixed
+    {
+        $type = (string)($fieldContract['type'] ?? 'string');
+
+        if ($type === 'number') {
+            return $this->normalizeNumber($value);
+        }
+
+        if ($type === 'boolean') {
+            return $this->asBool($value, false);
+        }
+
+        return $this->normalizeOptionValue($value, $fieldContract);
+    }
+
+    /**
+     * @return string[]
+     */
+    private function validateByContract(mixed $rawValue, mixed $normalizedValue, array $fieldContract): array
+    {
+        $errors = [];
+        $type = (string)($fieldContract['type'] ?? 'string');
+
+        if ($type === 'number' && !is_numeric($normalizedValue)) {
+            $errors[] = 'Suggestion value must be numeric.';
+        }
+
+        if ($type === 'boolean' && !$this->isBoolLike($rawValue)) {
+            $errors[] = 'Suggestion value must be boolean.';
+        }
+
+        $format = (string)($fieldContract['format'] ?? '');
+        if (in_array($format, ['date', 'date-time'], true) && strtotime((string)$rawValue) === false) {
+            $errors[] = 'Suggestion value must be a valid date.';
+        }
+
+        $options = $fieldContract['options'] ?? null;
+        if (is_array($options) && $options !== [] && !$this->matchesOption($rawValue, $options)) {
+            $errors[] = 'Suggestion value must match one of the configured options.';
+        }
+
+        return $errors;
+    }
+
+    private function normalizeOptionValue(mixed $value, array $fieldContract): string
+    {
+        $raw = trim((string)$value);
+        $options = $fieldContract['options'] ?? null;
+
+        if (is_array($options)) {
+            foreach ($options as $option) {
+                if (!is_array($option)) {
+                    continue;
+                }
+
+                $optionValue = trim((string)($option['value'] ?? ''));
+                $optionLabel = trim((string)($option['label'] ?? ''));
+
+                if ($raw === $optionValue || strcasecmp($raw, $optionLabel) === 0) {
+                    return $optionValue;
+                }
+            }
+        }
+
+        return $raw;
+    }
+
+    private function normalizeNumber(mixed $value): ?float
+    {
+        if (is_numeric($value)) {
+            return (float)$value;
+        }
+
+        $cleaned = preg_replace('/[^\d.+-]/', '', str_replace([',', ' '], '', (string)$value));
+        if ($cleaned === null || $cleaned === '' || in_array($cleaned, ['.', '-', '+'], true) || !is_numeric($cleaned)) {
+            return null;
+        }
+
+        return (float)$cleaned;
+    }
+
+    /**
+     * @param array<int, mixed> $options
+     */
+    private function matchesOption(mixed $value, array $options): bool
+    {
+        $raw = trim((string)$value);
+
+        foreach ($options as $option) {
+            if (!is_array($option)) {
+                continue;
+            }
+
+            if ($raw === trim((string)($option['value'] ?? '')) || strcasecmp($raw, trim((string)($option['label'] ?? ''))) === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isBoolLike(mixed $value): bool
+    {
+        if (is_bool($value) || is_numeric($value)) {
+            return true;
+        }
+
+        if (!is_string($value)) {
+            return false;
+        }
+
+        return in_array(strtolower(trim($value)), ['0', '1', 'false', 'true', 'off', 'on', 'no', 'yes'], true);
+    }
+
+    private function asBool(mixed $value, bool $defaultValue = true): bool
+    {
+        if ($value === null || $value === '') {
+            return $defaultValue;
+        }
+
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_numeric($value)) {
+            return (float)$value !== 0.0;
+        }
+
+        $normalized = strtolower(trim((string)$value));
+
+        if (in_array($normalized, ['0', 'false', 'off', 'no'], true)) {
+            return false;
+        }
+
+        if (in_array($normalized, ['1', 'true', 'on', 'yes'], true)) {
+            return true;
+        }
+
+        return $defaultValue;
+    }
+
+    private function normalizeName(mixed $value): string
+    {
+        return strtolower(trim((string)$value));
     }
 }

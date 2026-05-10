@@ -81,7 +81,7 @@ class AutofillField extends Field
             'field' => $this,
             'entryTypeOptions' => $this->getEntryTypeOptions(),
             'modelConfigOptions' => $this->getModelConfigOptions(),
-            'supportedFields' => $selectedEntryType ? AutofillPlugin::getInstance()->fieldDiscoveryService->getSupportedEntryTypeFields($selectedEntryType) : [],
+            'supportedFields' => $selectedEntryType ? AutofillPlugin::getInstance()->getFieldDiscoveryService()->getSupportedEntryTypeFields($selectedEntryType) : [],
             'rows' => $this->rows,
             'contextRows' => $this->contextRows,
         ]);
@@ -94,66 +94,8 @@ class AutofillField extends Field
 
     protected function inputHtml(mixed $value, ?ElementInterface $element, bool $inline): string
     {
-        $fieldContractsByUid = [];
-        $fieldNameByUid = [];
-        $fieldHandleByUid = [];
-        $contextValueByUid = [];
-
-        if ($element) {
-            $nativeFields = [
-                '__native__:title' => ['name' => 'Title', 'handle' => 'title', 'type' => 'string'],
-                '__native__:slug' => ['name' => 'Slug', 'handle' => 'slug', 'type' => 'string'],
-                '__native__:postDate' => ['name' => 'Post Date', 'handle' => 'postDate', 'type' => 'string'],
-                '__native__:expiryDate' => ['name' => 'Expiration Date', 'handle' => 'expiryDate', 'type' => 'string'],
-                '__native__:enabled' => ['name' => 'Enabled', 'handle' => 'enabled', 'type' => 'boolean'],
-            ];
-
-            foreach ($nativeFields as $uid => $meta) {
-                $handle = $meta['handle'];
-                $rawValue = $element->$handle ?? null;
-                if ($rawValue instanceof \DateTimeInterface) {
-                    $resolvedValue = $rawValue->format(\DateTimeInterface::ATOM);
-                } elseif (is_bool($rawValue)) {
-                    $resolvedValue = $rawValue ? 'true' : 'false';
-                } elseif ($rawValue === null) {
-                    $resolvedValue = '';
-                } else {
-                    $resolvedValue = trim((string)$rawValue);
-                }
-
-                $fieldNameByUid[$uid] = $meta['name'];
-                $fieldHandleByUid[$uid] = $handle;
-                $contextValueByUid[$uid] = $resolvedValue;
-                $fieldContractsByUid[$uid] = ['type' => $meta['type']];
-            }
-        }
-
-        if ($element?->getFieldLayout()) {
-            $adapterService = AutofillPlugin::getInstance()->fieldAdapterService;
-            foreach ($element->getFieldLayout()->getCustomFields() as $layoutField) {
-                $uid = (string)($layoutField->uid ?? '');
-                if ($uid === '') {
-                    continue;
-                }
-
-                $adapter = $adapterService->getAdapterForField($layoutField);
-                if ($adapter === null) {
-                    continue;
-                }
-
-                $fieldContractsByUid[$uid] = $adapter->buildPromptContract($layoutField);
-                $fieldNameByUid[$uid] = (string)($layoutField->name ?? $uid);
-                $fieldHandleByUid[$uid] = (string)($layoutField->handle ?? '');
-            }
-        }
-
         return Craft::$app->getView()->renderTemplate('autofill/fields/autofill/input.twig', [
             'field' => $this,
-            'element' => $element,
-            'fieldContractsByUid' => $fieldContractsByUid,
-            'prefilledFieldNameByUid' => $fieldNameByUid,
-            'prefilledFieldHandleByUid' => $fieldHandleByUid,
-            'prefilledContextValueByUid' => $contextValueByUid,
         ]);
     }
 

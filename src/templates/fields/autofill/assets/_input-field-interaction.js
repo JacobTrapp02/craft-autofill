@@ -1,0 +1,115 @@
+(() => {
+    // Brings target fields into view and prepares them for editor interaction.
+    window.AutofillInputRuntime = window.AutofillInputRuntime || {};
+    const runtime = window.AutofillInputRuntime;
+    const HIGHLIGHT_CLASS = 'autofill-focus-highlight';
+    const TOP_VIEWPORT_OFFSET = 96;
+    let highlightedAnchor = null;
+    let highlightTimer = null;
+
+    const scrollFieldIntoTopView = (input) => {
+        const anchor = runtime.getInteractionAnchor(input);
+        const absoluteTop = anchor.getBoundingClientRect().top + window.scrollY;
+        const targetY = Math.max(0, absoluteTop - TOP_VIEWPORT_OFFSET);
+        window.scrollTo({ top: targetY, left: 0, behavior: 'auto' });
+    };
+
+    const activateTabForInput = (input) => {
+        const nearestPane = input.closest('.pane[id], .content-pane[id], [id]');
+        const panes = [];
+        if (nearestPane instanceof HTMLElement) {
+            panes.push(nearestPane);
+        }
+
+        const fallbackAncestors = [];
+        let cursor = input.parentElement;
+        while (cursor) {
+            if (cursor.id) {
+                fallbackAncestors.push(cursor);
+            }
+            cursor = cursor.parentElement;
+        }
+
+        const candidates = [...new Set([...panes, ...fallbackAncestors])];
+        const pane = candidates.find((candidate) => {
+            const id = candidate.id || '';
+            return id.startsWith('tab') || id.includes('--') || candidate.classList.contains('pane') || candidate.classList.contains('content-pane');
+        });
+
+        if (!(pane instanceof HTMLElement)) {
+            return;
+        }
+
+        const paneId = pane.id;
+        if (!paneId) {
+            return;
+        }
+
+        const selectors = [
+            `.tabs a[href="#${paneId}"]`,
+            `.tabs button[data-id="${paneId}"]`,
+            `[role="tablist"] a[href="#${paneId}"]`,
+            `[role="tablist"] [aria-controls="${paneId}"]`,
+            `[data-tabs] a[href="#${paneId}"]`,
+            `a[href="#${paneId}"]`,
+        ];
+        const tabTrigger = document.querySelector(selectors.join(', '));
+
+        if (tabTrigger instanceof HTMLElement) {
+            tabTrigger.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+            tabTrigger.click();
+            if (window.location.hash !== `#${paneId}`) {
+                history.replaceState(null, '', `#${paneId}`);
+            }
+            return;
+        }
+
+        pane.classList.remove('hidden');
+        pane.classList.add('active');
+        pane.style.display = '';
+        pane.removeAttribute('aria-hidden');
+        if (window.location.hash !== `#${paneId}`) {
+            history.replaceState(null, '', `#${paneId}`);
+        }
+    };
+
+    runtime.prepareInputForInteraction = (input) => {
+        activateTabForInput(input);
+        scrollFieldIntoTopView(input);
+        const anchor = runtime.getInteractionAnchor(input);
+        if (highlightedAnchor instanceof HTMLElement) {
+            highlightedAnchor.classList.remove(HIGHLIGHT_CLASS);
+        }
+        if (highlightTimer) {
+            window.clearTimeout(highlightTimer);
+        }
+        if (anchor instanceof HTMLElement) {
+            anchor.classList.add(HIGHLIGHT_CLASS);
+            highlightedAnchor = anchor;
+            highlightTimer = window.setTimeout(() => {
+                if (highlightedAnchor instanceof HTMLElement) {
+                    highlightedAnchor.classList.remove(HIGHLIGHT_CLASS);
+                }
+                highlightedAnchor = null;
+                highlightTimer = null;
+            }, 1800);
+        }
+        if (typeof input.focus === 'function') {
+            input.focus();
+        }
+        if (typeof runtime.positionActiveReviewModal === 'function') {
+            runtime.positionActiveReviewModal(input);
+        }
+    };
+
+    runtime.focusMatchedField = (matchedHandle) => {
+        if (!matchedHandle) {
+            return;
+        }
+        const input = runtime.findFieldInputByHandle(matchedHandle);
+        if (!(input instanceof HTMLElement)) {
+            return;
+        }
+        runtime.prepareInputForInteraction(input);
+    };
+})();

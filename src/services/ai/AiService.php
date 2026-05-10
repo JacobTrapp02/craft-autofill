@@ -36,13 +36,23 @@ class AiService extends Component
 
     public function generate(
         string $fieldId,
-        array $userProvidedContent = []
+        array $userProvidedContent = [],
     ): AiGenerationResult {
         throw new RuntimeException(sprintf(
             'AiService::generate() is pending Autofill field integration. Received fieldId (%s) and %d user-provided content item(s).',
             $fieldId,
             count($userProvidedContent)
         ));
+    }
+
+    public function buildAutofillPromptPreview(string $userPrompt, int $fieldId): string
+    {
+        return $this->promptBuilder->buildAutofillPromptPreview($userPrompt, $fieldId);
+    }
+
+    public function normalizeAutofillResponse(string $rawResponse, int $fieldId): AiGenerationResult
+    {
+        return $this->responseNormalizer->normalizeAutofillResponse($rawResponse, $fieldId);
     }
 
     public function generateFromRequest(AiGenerationRequest $request, Model $providerConfig): AiGenerationResult
