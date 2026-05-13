@@ -106,4 +106,20 @@ class LightswitchFieldAdapter implements FieldAdapterInterface
 
         return false;
     }
+
+    public function getFillRuntimeSpec(FieldInterface $field): array
+    {
+        return [
+            'inputKind' => 'checkbox',
+            'applyVia' => 'native',
+            'acceptanceCheck' => 'checkedState',
+        ];
+    }
+
+    public function getReviewUiSpec(FieldInterface $field): array
+    {
+        return [
+            'inputControl' => 'textarea',
+        ];
+    }
 }

@@ -101,4 +101,20 @@ class NumberFieldAdapter implements FieldAdapterInterface
 
         return null;
     }
+
+    public function getFillRuntimeSpec(FieldInterface $field): array
+    {
+        return [
+            'inputKind' => 'number',
+            'applyVia' => 'native',
+            'acceptanceCheck' => 'valueRoundTrip',
+        ];
+    }
+
+    public function getReviewUiSpec(FieldInterface $field): array
+    {
+        return [
+            'inputControl' => 'textarea',
+        ];
+    }
 }

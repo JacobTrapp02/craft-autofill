@@ -16,6 +16,9 @@
     }
 
     const config = window.__autofillPreviewConfig || {};
+    runtime.fillRuntimeSpecsByHandle = (config.fillRuntimeSpecsByHandle && typeof config.fillRuntimeSpecsByHandle === 'object')
+        ? config.fillRuntimeSpecsByHandle
+        : {};
     const reviewModal = runtime.createReviewModal({
         applySuggestionValue: runtime.applySuggestionValue,
         focusMatchedField: runtime.focusMatchedField,

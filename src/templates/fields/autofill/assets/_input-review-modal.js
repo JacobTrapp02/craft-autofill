@@ -129,7 +129,13 @@
                 const current = suggestions[currentIndex];
                 current.value = modalState.value.value;
                 if (current.matchedHandle) {
-                    applySuggestionValue(current.matchedHandle, current.value);
+                    const applied = applySuggestionValue(current.matchedHandle, current.value, current);
+                    if (!applied) {
+                        const existing = Array.isArray(current.validationErrors) ? current.validationErrors : [];
+                        current.validationErrors = [...existing, 'Suggestion could not be applied to the matched field.'];
+                        renderCurrent();
+                        return;
+                    }
                 }
                 if (currentIndex < suggestions.length - 1) {
                     currentIndex += 1;

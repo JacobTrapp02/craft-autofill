@@ -124,6 +124,23 @@ class DateFieldAdapter implements FieldAdapterInterface
             : date('Y-m-d', $timestamp);
     }
 
+    public function getFillRuntimeSpec(FieldInterface $field): array
+    {
+        return [
+            'inputKind' => 'dateSplit',
+            'applyVia' => 'native',
+            'acceptanceCheck' => 'valueRoundTrip',
+            'includesTime' => $this->includesTime($field),
+        ];
+    }
+
+    public function getReviewUiSpec(FieldInterface $field): array
+    {
+        return [
+            'inputControl' => 'textarea',
+        ];
+    }
+
     private function includesTime(FieldInterface $field): bool
     {
         if (!$field instanceof Date) {

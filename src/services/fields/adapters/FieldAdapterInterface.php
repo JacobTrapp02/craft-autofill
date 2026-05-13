@@ -53,4 +53,18 @@ interface FieldAdapterInterface
     public function validateSuggestion(FieldInterface $field, mixed $value): bool;
 
     public function normalizeSuggestion(FieldInterface $field, mixed $value): mixed;
+
+    /**
+     * Returns field-type-specific runtime behavior metadata for frontend filling.
+     *
+     * @return array<string, mixed>
+     */
+    public function getFillRuntimeSpec(FieldInterface $field): array;
+
+    /**
+     * Returns field-type-specific review modal rendering metadata.
+     *
+     * @return array<string, mixed>
+     */
+    public function getReviewUiSpec(FieldInterface $field): array;
 }

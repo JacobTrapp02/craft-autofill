@@ -98,4 +98,20 @@ class PlainTextFieldAdapter implements FieldAdapterInterface
 
         return '';
     }
+
+    public function getFillRuntimeSpec(FieldInterface $field): array
+    {
+        return [
+            'inputKind' => 'text',
+            'applyVia' => 'native',
+            'acceptanceCheck' => 'valueRoundTrip',
+        ];
+    }
+
+    public function getReviewUiSpec(FieldInterface $field): array
+    {
+        return [
+            'inputControl' => 'textarea',
+        ];
+    }
 }

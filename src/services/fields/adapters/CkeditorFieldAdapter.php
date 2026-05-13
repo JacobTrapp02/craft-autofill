@@ -97,4 +97,20 @@ class CkeditorFieldAdapter implements FieldAdapterInterface
 
         return '';
     }
+
+    public function getFillRuntimeSpec(FieldInterface $field): array
+    {
+        return [
+            'inputKind' => 'richText',
+            'applyVia' => 'native',
+            'acceptanceCheck' => 'valueRoundTrip',
+        ];
+    }
+
+    public function getReviewUiSpec(FieldInterface $field): array
+    {
+        return [
+            'inputControl' => 'textarea',
+        ];
+    }
 }

@@ -117,4 +117,51 @@ class DropdownFieldAdapter implements FieldAdapterInterface
 
         return '';
     }
+
+    public function getFillRuntimeSpec(FieldInterface $field): array
+    {
+        return [
+            'inputKind' => 'select',
+            'applyVia' => 'selectize',
+            'resolveBy' => 'both',
+            'acceptanceCheck' => 'selectedOptionExists',
+        ];
+    }
+
+    public function getReviewUiSpec(FieldInterface $field): array
+    {
+        return [
+            'inputControl' => 'select',
+            'options' => $this->buildUiOptions($field),
+        ];
+    }
+
+    /**
+     * @return array<int, array{value:string,label:string}>
+     */
+    private function buildUiOptions(FieldInterface $field): array
+    {
+        $options = [];
+
+        if ($field instanceof Dropdown && is_array($field->options ?? null)) {
+            foreach ($field->options as $option) {
+                if (!is_array($option)) {
+                    continue;
+                }
+
+                $value = trim((string)($option['value'] ?? ''));
+                $label = trim((string)($option['label'] ?? ''));
+                if ($value === '') {
+                    continue;
+                }
+
+                $options[] = [
+                    'value' => $value,
+                    'label' => $label,
+                ];
+            }
+        }
+
+        return $options;
+    }
 }

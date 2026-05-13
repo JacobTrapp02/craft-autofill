@@ -24,7 +24,12 @@
             }
 
             if (item.matchedHandle && item.requiresApproval === false) {
-                runtime.applySuggestionValue(item.matchedHandle, item.value);
+                const applied = runtime.applySuggestionValue(item.matchedHandle, item.value, item);
+                if (!applied) {
+                    item.validationErrors = Array.isArray(item.validationErrors) ? item.validationErrors : [];
+                    item.validationErrors.push('Suggestion could not be applied to the matched field.');
+                    reviewRequired.push(item);
+                }
                 return;
             }
 
