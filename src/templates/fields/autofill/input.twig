@@ -1,8 +1,10 @@
 {% set previewConfig = {
     fieldId: field.id ?? null,
+    entryId: element.id ?? null,
+    siteId: element.siteId ?? null,
     promptPreviewActionUrl: actionUrl('autofill/prompt-preview/build-prompt'),
     responseNormalizeActionUrl: actionUrl('autofill/response-preview/normalize-response'),
-    fillRuntimeSpecsByHandle: {},
+    applySuggestionActionUrl: actionUrl('autofill/response-preview/apply-suggestion'),
 } %}
 
 <div class="autofill-runtime" data-autofill-runtime>
@@ -127,7 +129,6 @@ window.__autofillPreviewConfig = {{ previewConfig|json_encode|raw }};
 {% include 'autofill/fields/autofill/assets/_input-api.js' %}
 {% include 'autofill/fields/autofill/assets/_input-field-locator.js' %}
 {% include 'autofill/fields/autofill/assets/_input-field-interaction.js' %}
-{% include 'autofill/fields/autofill/assets/_input-value-applier.js' %}
 {% include 'autofill/fields/autofill/assets/_input-review-modal.js' %}
 {% include 'autofill/fields/autofill/assets/_input-suggestion-flow.js' %}
 {% include 'autofill/fields/autofill/assets/_input-runtime.js' %}

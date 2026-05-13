@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace jtdev\craftautofill\services\fields\adapters;
 
 use craft\base\FieldInterface;
+use craft\elements\Entry;
 use craft\fields\Dropdown;
+use RuntimeException;
 
 class DropdownFieldAdapter implements FieldAdapterInterface
 {
@@ -118,50 +120,15 @@ class DropdownFieldAdapter implements FieldAdapterInterface
         return '';
     }
 
-    public function getFillRuntimeSpec(FieldInterface $field): array
+    public function applySuggestionToEntry(FieldInterface $field, Entry $entry, mixed $value): mixed
     {
-        return [
-            'inputKind' => 'select',
-            'applyVia' => 'selectize',
-            'resolveBy' => 'both',
-            'acceptanceCheck' => 'selectedOptionExists',
-        ];
-    }
-
-    public function getReviewUiSpec(FieldInterface $field): array
-    {
-        return [
-            'inputControl' => 'select',
-            'options' => $this->buildUiOptions($field),
-        ];
-    }
-
-    /**
-     * @return array<int, array{value:string,label:string}>
-     */
-    private function buildUiOptions(FieldInterface $field): array
-    {
-        $options = [];
-
-        if ($field instanceof Dropdown && is_array($field->options ?? null)) {
-            foreach ($field->options as $option) {
-                if (!is_array($option)) {
-                    continue;
-                }
-
-                $value = trim((string)($option['value'] ?? ''));
-                $label = trim((string)($option['label'] ?? ''));
-                if ($value === '') {
-                    continue;
-                }
-
-                $options[] = [
-                    'value' => $value,
-                    'label' => $label,
-                ];
-            }
+        $normalized = $this->normalizeSuggestion($field, $value);
+        $handle = (string)($field->handle ?? '');
+        if ($handle === '') {
+            throw new RuntimeException('Could not resolve field handle for dropdown suggestion apply.');
         }
 
-        return $options;
+        $entry->setFieldValue($handle, $normalized);
+        return $normalized;
     }
 }

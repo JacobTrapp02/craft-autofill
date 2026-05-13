@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace jtdev\craftautofill\services\fields\adapters;
 
 use craft\base\FieldInterface;
+use craft\elements\Entry;
 use craft\fields\Number;
+use RuntimeException;
 
 class NumberFieldAdapter implements FieldAdapterInterface
 {
@@ -102,19 +104,15 @@ class NumberFieldAdapter implements FieldAdapterInterface
         return null;
     }
 
-    public function getFillRuntimeSpec(FieldInterface $field): array
+    public function applySuggestionToEntry(FieldInterface $field, Entry $entry, mixed $value): mixed
     {
-        return [
-            'inputKind' => 'number',
-            'applyVia' => 'native',
-            'acceptanceCheck' => 'valueRoundTrip',
-        ];
-    }
+        $normalized = $this->normalizeSuggestion($field, $value);
+        $handle = (string)($field->handle ?? '');
+        if ($handle === '') {
+            throw new RuntimeException('Could not resolve field handle for number suggestion apply.');
+        }
 
-    public function getReviewUiSpec(FieldInterface $field): array
-    {
-        return [
-            'inputControl' => 'textarea',
-        ];
+        $entry->setFieldValue($handle, $normalized);
+        return $normalized;
     }
 }

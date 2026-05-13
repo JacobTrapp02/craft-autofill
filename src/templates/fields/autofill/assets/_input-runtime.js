@@ -16,11 +16,28 @@
     }
 
     const config = window.__autofillPreviewConfig || {};
-    runtime.fillRuntimeSpecsByHandle = (config.fillRuntimeSpecsByHandle && typeof config.fillRuntimeSpecsByHandle === 'object')
-        ? config.fillRuntimeSpecsByHandle
-        : {};
+    const applySuggestionServer = async (suggestion) => {
+        const applySuggestionActionUrl = config.applySuggestionActionUrl || '';
+        const fieldId = Number(config.fieldId || 0);
+        const entryId = Number(config.entryId || 0);
+        const siteId = Number(config.siteId || 0);
+
+        if (!applySuggestionActionUrl || !fieldId || !entryId) {
+            throw new Error('Server-side suggestion apply is not configured for this entry. Save the entry first, then retry.');
+        }
+
+        await runtime.applySuggestionViaServer({
+            endpoint: applySuggestionActionUrl,
+            fieldId,
+            entryId,
+            siteId: siteId || null,
+            suggestion,
+        });
+
+        return true;
+    };
     const reviewModal = runtime.createReviewModal({
-        applySuggestionValue: runtime.applySuggestionValue,
+        applySuggestion: applySuggestionServer,
         focusMatchedField: runtime.focusMatchedField,
     });
     runtime.positionActiveReviewModal = reviewModal.positionBelowField;
@@ -69,7 +86,8 @@
                     fieldId,
                     rawResponse: responseInput.value,
                 });
-                reviewModal.setSuggestions(runtime.collectReviewRequiredSuggestions(suggestions));
+                const reviewSuggestions = await runtime.collectReviewRequiredSuggestions(suggestions, applySuggestionServer);
+                reviewModal.setSuggestions(reviewSuggestions);
             } catch (error) {
                 reviewModal.clear();
                 window.alert(error instanceof Error ? error.message : 'Could not normalize response.');

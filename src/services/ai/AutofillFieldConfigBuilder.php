@@ -23,8 +23,6 @@ class AutofillFieldConfigBuilder extends Component
         }
 
         $fieldContractsByUid = [];
-        $fillRuntimeSpecsByUid = [];
-        $reviewUiSpecsByUid = [];
         $fieldNameByUid = [];
         $fieldHandleByUid = [];
         $contextValueByUid = [];
@@ -33,8 +31,6 @@ class AutofillFieldConfigBuilder extends Component
             $fieldNameByUid[$uid] = $meta['name'];
             $fieldHandleByUid[$uid] = $meta['handle'];
             $fieldContractsByUid[$uid] = ['type' => $meta['type']];
-            $fillRuntimeSpecsByUid[$uid] = $this->nativeFillRuntimeSpec($uid);
-            $reviewUiSpecsByUid[$uid] = ['inputControl' => 'textarea'];
             $contextValueByUid[$uid] = '';
         }
 
@@ -54,22 +50,10 @@ class AutofillFieldConfigBuilder extends Component
                 }
 
                 $fieldContractsByUid[$uid] = $adapter->buildPromptContract($layoutField);
-                $fillRuntimeSpecsByUid[$uid] = $adapter->getFillRuntimeSpec($layoutField);
-                $reviewUiSpecsByUid[$uid] = $adapter->getReviewUiSpec($layoutField);
                 $fieldNameByUid[$uid] = (string)($layoutField->name ?? $uid);
                 $fieldHandleByUid[$uid] = (string)($layoutField->handle ?? '');
                 $contextValueByUid[$uid] = '';
             }
-        }
-
-        $fillRuntimeSpecsByHandle = [];
-        foreach ($fieldHandleByUid as $uid => $handle) {
-            $normalizedHandle = trim((string)$handle);
-            if ($normalizedHandle === '') {
-                continue;
-            }
-
-            $fillRuntimeSpecsByHandle[$normalizedHandle] = $fillRuntimeSpecsByUid[$uid] ?? [];
         }
 
         return [
@@ -79,36 +63,8 @@ class AutofillFieldConfigBuilder extends Component
             'fieldNameByUid' => $fieldNameByUid,
             'fieldHandleByUid' => $fieldHandleByUid,
             'fieldContractsByUid' => $fieldContractsByUid,
-            'fillRuntimeSpecsByUid' => $fillRuntimeSpecsByUid,
-            'fillRuntimeSpecsByHandle' => $fillRuntimeSpecsByHandle,
-            'reviewUiSpecsByUid' => $reviewUiSpecsByUid,
             'contextValueByUid' => $contextValueByUid,
         ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function nativeFillRuntimeSpec(string $uid): array
-    {
-        return match ($uid) {
-            '__native__:enabled' => [
-                'inputKind' => 'checkbox',
-                'applyVia' => 'native',
-                'acceptanceCheck' => 'checkedState',
-            ],
-            '__native__:postDate', '__native__:expiryDate' => [
-                'inputKind' => 'dateSplit',
-                'applyVia' => 'native',
-                'acceptanceCheck' => 'valueRoundTrip',
-                'includesTime' => true,
-            ],
-            default => [
-                'inputKind' => 'text',
-                'applyVia' => 'native',
-                'acceptanceCheck' => 'valueRoundTrip',
-            ],
-        };
     }
 
     /**

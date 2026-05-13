@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace jtdev\craftautofill\services\fields\adapters;
 
 use craft\base\FieldInterface;
+use craft\elements\Entry;
 use craft\fields\Lightswitch;
+use RuntimeException;
 
 class LightswitchFieldAdapter implements FieldAdapterInterface
 {
@@ -107,19 +109,15 @@ class LightswitchFieldAdapter implements FieldAdapterInterface
         return false;
     }
 
-    public function getFillRuntimeSpec(FieldInterface $field): array
+    public function applySuggestionToEntry(FieldInterface $field, Entry $entry, mixed $value): mixed
     {
-        return [
-            'inputKind' => 'checkbox',
-            'applyVia' => 'native',
-            'acceptanceCheck' => 'checkedState',
-        ];
-    }
+        $normalized = $this->normalizeSuggestion($field, $value);
+        $handle = (string)($field->handle ?? '');
+        if ($handle === '') {
+            throw new RuntimeException('Could not resolve field handle for lightswitch suggestion apply.');
+        }
 
-    public function getReviewUiSpec(FieldInterface $field): array
-    {
-        return [
-            'inputControl' => 'textarea',
-        ];
+        $entry->setFieldValue($handle, $normalized);
+        return $normalized;
     }
 }

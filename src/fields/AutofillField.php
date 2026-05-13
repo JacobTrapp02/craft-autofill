@@ -96,6 +96,7 @@ class AutofillField extends Field
     {
         return Craft::$app->getView()->renderTemplate('autofill/fields/autofill/input.twig', [
             'field' => $this,
+            'element' => $element,
         ]);
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace jtdev\craftautofill\services\fields\adapters;
 
 use craft\base\FieldInterface;
+use craft\elements\Entry;
 
 interface FieldAdapterInterface
 {
@@ -55,16 +56,7 @@ interface FieldAdapterInterface
     public function normalizeSuggestion(FieldInterface $field, mixed $value): mixed;
 
     /**
-     * Returns field-type-specific runtime behavior metadata for frontend filling.
-     *
-     * @return array<string, mixed>
+     * Applies a suggestion value to the given entry for this field.
      */
-    public function getFillRuntimeSpec(FieldInterface $field): array;
-
-    /**
-     * Returns field-type-specific review modal rendering metadata.
-     *
-     * @return array<string, mixed>
-     */
-    public function getReviewUiSpec(FieldInterface $field): array;
+    public function applySuggestionToEntry(FieldInterface $field, Entry $entry, mixed $value): mixed;
 }

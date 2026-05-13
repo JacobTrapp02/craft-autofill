@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace jtdev\craftautofill\services\fields\adapters;
 
 use craft\base\FieldInterface;
+use craft\elements\Entry;
 use craft\fields\Date;
+use RuntimeException;
 
 class DateFieldAdapter implements FieldAdapterInterface
 {
@@ -124,21 +126,16 @@ class DateFieldAdapter implements FieldAdapterInterface
             : date('Y-m-d', $timestamp);
     }
 
-    public function getFillRuntimeSpec(FieldInterface $field): array
+    public function applySuggestionToEntry(FieldInterface $field, Entry $entry, mixed $value): mixed
     {
-        return [
-            'inputKind' => 'dateSplit',
-            'applyVia' => 'native',
-            'acceptanceCheck' => 'valueRoundTrip',
-            'includesTime' => $this->includesTime($field),
-        ];
-    }
+        $normalized = $this->normalizeSuggestion($field, $value);
+        $handle = (string)($field->handle ?? '');
+        if ($handle === '') {
+            throw new RuntimeException('Could not resolve field handle for date suggestion apply.');
+        }
 
-    public function getReviewUiSpec(FieldInterface $field): array
-    {
-        return [
-            'inputControl' => 'textarea',
-        ];
+        $entry->setFieldValue($handle, $normalized);
+        return $normalized;
     }
 
     private function includesTime(FieldInterface $field): bool

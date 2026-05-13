@@ -124,7 +124,6 @@ class AiResponseNormalizer extends Component
                 'valueIsNull' => $valueIsNull,
                 'targetFieldUid' => $targetFieldUid,
                 'matchedHandle' => (string)($match['handle'] ?? ''),
-                'fillRuntimeSpec' => is_array($match['fillRuntimeSpec'] ?? null) ? $match['fillRuntimeSpec'] : [],
                 'requiresApproval' => $this->asBool($match['requiresApproval'] ?? true),
                 'overrideCurrentValue' => $this->asBool($match['overrideCurrentValue'] ?? true),
                 'validationErrors' => array_values(array_unique($validationErrors)),
@@ -247,7 +246,6 @@ class AiResponseNormalizer extends Component
                 'requiresApproval' => $row['requiresApproval'] ?? true,
                 'overrideCurrentValue' => $row['overrideCurrentValue'] ?? true,
                 'fieldContract' => $config['fieldContractsByUid'][$targetFieldUid] ?? [],
-                'fillRuntimeSpec' => $config['fillRuntimeSpecsByUid'][$targetFieldUid] ?? [],
             ];
         }
 

@@ -3,7 +3,7 @@
     window.AutofillInputRuntime = window.AutofillInputRuntime || {};
     const runtime = window.AutofillInputRuntime;
 
-    runtime.createReviewModal = ({ applySuggestionValue, focusMatchedField }) => {
+    runtime.createReviewModal = ({ applySuggestion, focusMatchedField }) => {
         let suggestions = [];
         let currentIndex = 0;
 
@@ -111,7 +111,7 @@
             teardown();
         };
 
-        const handleDocumentClick = (event) => {
+        const handleDocumentClick = async (event) => {
             const target = event.target;
             if (!(target instanceof HTMLElement) || !(modalState.modal instanceof HTMLElement)) {
                 return;
@@ -129,10 +129,15 @@
                 const current = suggestions[currentIndex];
                 current.value = modalState.value.value;
                 if (current.matchedHandle) {
-                    const applied = applySuggestionValue(current.matchedHandle, current.value, current);
-                    if (!applied) {
+                    try {
+                        await applySuggestion({
+                            ...current,
+                            value: current.value,
+                        });
+                    } catch (error) {
                         const existing = Array.isArray(current.validationErrors) ? current.validationErrors : [];
-                        current.validationErrors = [...existing, 'Suggestion could not be applied to the matched field.'];
+                        const message = error instanceof Error ? error.message : 'Suggestion could not be applied to the matched field.';
+                        current.validationErrors = [...existing, message];
                         renderCurrent();
                         return;
                     }

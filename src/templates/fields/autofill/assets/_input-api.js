@@ -51,4 +51,14 @@
 
         return Array.isArray(data.suggestions) ? data.suggestions : [];
     };
+
+    runtime.applySuggestionViaServer = async ({ endpoint, fieldId, entryId, siteId, suggestion }) => {
+        const data = await postJson(
+            endpoint,
+            { fieldId, entryId, siteId, suggestion },
+            'Could not apply suggestion.',
+        );
+
+        return data.applied || null;
+    };
 })();
