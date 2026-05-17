@@ -80,27 +80,74 @@
 
 .autofill-review-modal {
     position: fixed;
-    top: 120px;
+    top: 96px;
     left: 50%;
     transform: translateX(-50%);
-    width: min(640px, calc(100vw - 32px));
+    width: min(720px, calc(100vw - 32px));
     background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    border: 1px solid #d7dde5;
+    box-shadow: 0 22px 44px rgba(15, 23, 42, 0.14), 0 6px 16px rgba(15, 23, 42, 0.08);
     z-index: 9999;
-    padding: 14px;
+    padding: 18px 18px 16px;
 }
 
-.autofill-review-modal .heading {
-    margin-bottom: 8px;
+.autofill-review-modal__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
 }
 
-.autofill-review-modal .input textarea {
-    min-height: 84px;
+.autofill-review-modal__title {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.25;
+    font-weight: 600;
+    color: #2f3a47;
 }
 
-.autofill-review-modal .buttons {
-    margin-top: 10px;
+.autofill-review-modal__counter {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.3;
+    font-weight: 500;
+    color: #67778a;
+}
+
+.autofill-review-modal__body {
+    display: grid;
+    gap: 10px;
+}
+
+.autofill-review-modal__field {
+    padding: 2px 0;
+    font-size: 16px;
+    line-height: 1.35;
+    font-weight: 600;
+    color: #364656;
+}
+
+.autofill-review-modal__errors {
+    margin: -2px 0 0;
+    font-size: 13px;
+    line-height: 1.35;
+    color: #b42318;
+}
+
+.autofill-review-modal [data-autofill-review-editor] textarea {
+    min-height: 88px;
+}
+
+.autofill-review-modal [data-autofill-review-editor] .autofill-review-editor-datetime {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.autofill-review-modal__buttons {
+    margin-top: 14px;
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
@@ -129,6 +176,7 @@ window.__autofillPreviewConfig = {{ previewConfig|json_encode|raw }};
 {% include 'autofill/fields/autofill/assets/_input-api.js' %}
 {% include 'autofill/fields/autofill/assets/_input-field-locator.js' %}
 {% include 'autofill/fields/autofill/assets/_input-field-interaction.js' %}
+{% include 'autofill/fields/autofill/assets/_input-review-renderers.js' %}
 {% include 'autofill/fields/autofill/assets/_input-review-modal.js' %}
 {% include 'autofill/fields/autofill/assets/_input-suggestion-flow.js' %}
 {% include 'autofill/fields/autofill/assets/_input-runtime.js' %}

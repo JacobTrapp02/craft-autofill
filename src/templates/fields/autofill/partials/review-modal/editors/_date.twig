@@ -1,0 +1,11 @@
+{% import '_includes/forms.twig' as forms %}
+
+{{ forms.text({
+    type: 'date',
+    value: '',
+    inputAttributes: {
+        data: {
+            'autofill-review-input': 'date',
+        },
+    },
+}) }}

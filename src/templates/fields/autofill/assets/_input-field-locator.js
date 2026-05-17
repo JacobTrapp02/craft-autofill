@@ -26,6 +26,7 @@
     runtime.findFieldInputByHandle = (handle) => {
         const escaped = escapeHandle(handle);
         const base = `[name="fields[${escaped}]"]`;
+        const nestedBase = `[name^="fields[${escaped}]["]`;
         const nativeCandidates = [
             `textarea[name="${escaped}"]`,
             `select[name="${escaped}"]`,
@@ -40,7 +41,7 @@
             `#${escaped}`,
         ];
 
-        return (
+        const primaryMatch = (
             pickBest(document.querySelectorAll(`textarea${base}`)) ||
             pickBest(document.querySelectorAll(`select${base}`)) ||
             pickBest(document.querySelectorAll(`input[type="text"]${base}`)) ||
@@ -51,6 +52,38 @@
             pickBest(document.querySelectorAll(nativeCandidates.join(', '))) ||
             null
         );
+
+        if (primaryMatch) {
+            return primaryMatch;
+        }
+
+        // Fallback for fields that use nested names such as fields[handle][value].
+        const nestedMatch = (
+            pickBest(document.querySelectorAll(`textarea${nestedBase}`)) ||
+            pickBest(document.querySelectorAll(`select${nestedBase}`)) ||
+            pickBest(document.querySelectorAll(`input[type="text"]${nestedBase}`)) ||
+            pickBest(document.querySelectorAll(`input[type="tel"]${nestedBase}`)) ||
+            pickBest(document.querySelectorAll(`input[type="number"]${nestedBase}`)) ||
+            pickBest(document.querySelectorAll(`input[type="checkbox"]${nestedBase}`)) ||
+            pickBest(document.querySelectorAll(`input${nestedBase}`)) ||
+            null
+        );
+
+        if (nestedMatch) {
+            return nestedMatch;
+        }
+
+        // Last-resort fallback by Craft field container markup.
+        const fieldContainer = document.querySelector(
+            `[data-attribute="${escaped}"], #fields-${escaped}-field`
+        );
+        if (!(fieldContainer instanceof HTMLElement)) {
+            return null;
+        }
+
+        return pickBest(fieldContainer.querySelectorAll(
+            'input[type="text"], input[type="tel"], input[type="number"], textarea, select, input:not([type="hidden"])'
+        ));
     };
 
     runtime.findSplitDateTimeInputsByHandle = (handle) => {

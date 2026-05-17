@@ -30,7 +30,10 @@ class AutofillFieldConfigBuilder extends Component
         foreach ($this->nativeFields() as $uid => $meta) {
             $fieldNameByUid[$uid] = $meta['name'];
             $fieldHandleByUid[$uid] = $meta['handle'];
-            $fieldContractsByUid[$uid] = ['type' => $meta['type']];
+            $fieldContractsByUid[$uid] = array_filter([
+                'type' => $meta['type'],
+                'format' => $meta['format'] ?? null,
+            ], static fn($value) => $value !== null);
             $contextValueByUid[$uid] = '';
         }
 
@@ -68,15 +71,15 @@ class AutofillFieldConfigBuilder extends Component
     }
 
     /**
-     * @return array<string, array{name:string, handle:string, type:string}>
+     * @return array<string, array{name:string, handle:string, type:string, format?:string}>
      */
     private function nativeFields(): array
     {
         return [
             '__native__:title' => ['name' => 'Title', 'handle' => 'title', 'type' => 'string'],
             '__native__:slug' => ['name' => 'Slug', 'handle' => 'slug', 'type' => 'string'],
-            '__native__:postDate' => ['name' => 'Post Date', 'handle' => 'postDate', 'type' => 'string'],
-            '__native__:expiryDate' => ['name' => 'Expiration Date', 'handle' => 'expiryDate', 'type' => 'string'],
+            '__native__:postDate' => ['name' => 'Post Date', 'handle' => 'postDate', 'type' => 'string', 'format' => 'date-time'],
+            '__native__:expiryDate' => ['name' => 'Expiration Date', 'handle' => 'expiryDate', 'type' => 'string', 'format' => 'date-time'],
             '__native__:enabled' => ['name' => 'Enabled', 'handle' => 'enabled', 'type' => 'boolean'],
         ];
     }

@@ -1,0 +1,12 @@
+{% import '_includes/forms.twig' as forms %}
+
+{{ forms.lightswitch({
+    on: false,
+    onLabel: 'On',
+    offLabel: 'Off',
+    containerAttributes: {
+        data: {
+            'autofill-review-input': 'lightswitch',
+        },
+    },
+}) }}

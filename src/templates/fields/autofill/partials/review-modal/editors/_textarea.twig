@@ -1,0 +1,11 @@
+{% import '_includes/forms.twig' as forms %}
+
+{{ forms.textarea({
+    rows: 3,
+    value: '',
+    inputAttributes: {
+        data: {
+            'autofill-review-input': 'textarea',
+        },
+    },
+}) }}

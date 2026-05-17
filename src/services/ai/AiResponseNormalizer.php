@@ -116,10 +116,13 @@ class AiResponseNormalizer extends Component
                 $validationErrors,
                 $this->validateSuggestionValue($targetFieldUid, $rawValue, $value, $fieldContract)
             );
+            [$displayValue, $displayValueIsLabel] = $this->resolveDisplayValue($value, $fieldContract);
+            $reviewEditor = $this->buildReviewEditorPayload($value, $fieldContract, $displayValue, $displayValueIsLabel);
 
             $suggestions[] = [
                 'fieldName' => $fieldName,
                 'value' => $value,
+                'reviewEditor' => $reviewEditor,
                 'hasRawValue' => $hasRawValue,
                 'valueIsNull' => $valueIsNull,
                 'targetFieldUid' => $targetFieldUid,
@@ -285,6 +288,118 @@ class AiResponseNormalizer extends Component
         }
 
         return array_merge($errors, $this->validateByContract($rawValue, $normalizedValue, $fieldContract));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildReviewEditorPayload(
+        mixed $normalizedValue,
+        array $fieldContract,
+        mixed $displayValue,
+        bool $displayValueIsLabel
+    ): array {
+        $format = (string)($fieldContract['format'] ?? '');
+        if ($format === 'date') {
+            return [
+                'type' => 'date',
+                'source' => 'contract:format=date',
+            ];
+        }
+
+        if ($format === 'date-time') {
+            return [
+                'type' => 'datetime',
+                'source' => 'contract:format=date-time',
+            ];
+        }
+
+        $type = (string)($fieldContract['type'] ?? '');
+        if ($type === 'boolean') {
+            return [
+                'type' => 'lightswitch',
+                'source' => 'contract:type=boolean',
+            ];
+        }
+
+        $options = $fieldContract['options'] ?? null;
+        if (is_array($options) && $options !== []) {
+            return [
+                'type' => 'dropdown',
+                'source' => 'contract:options',
+                'displayValue' => $displayValueIsLabel ? $displayValue : (string)$normalizedValue,
+                'options' => $this->normalizeReviewOptions($options),
+            ];
+        }
+
+        return [
+            'type' => 'textarea',
+            'source' => 'fallback:textarea',
+        ];
+    }
+
+    /**
+     * @param array<int, mixed> $options
+     * @return array<int, array{value:string,label:string}>
+     */
+    private function normalizeReviewOptions(array $options): array
+    {
+        $normalized = [];
+
+        foreach ($options as $option) {
+            if (!is_array($option)) {
+                continue;
+            }
+
+            $value = trim((string)($option['value'] ?? ''));
+            if ($value === '') {
+                continue;
+            }
+
+            $label = trim((string)($option['label'] ?? $value));
+            $normalized[] = [
+                'value' => $value,
+                'label' => $label !== '' ? $label : $value,
+            ];
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @return array{0:mixed,1:bool}
+     */
+    private function resolveDisplayValue(mixed $normalizedValue, array $fieldContract): array
+    {
+        $options = $fieldContract['options'] ?? null;
+        if (!is_array($options) || $options === []) {
+            return [$normalizedValue, false];
+        }
+
+        $normalized = trim((string)$normalizedValue);
+        if ($normalized === '') {
+            return [$normalizedValue, false];
+        }
+
+        foreach ($options as $option) {
+            if (!is_array($option)) {
+                continue;
+            }
+
+            $optionValue = trim((string)($option['value'] ?? ''));
+            if ($optionValue !== $normalized) {
+                continue;
+            }
+
+            $label = trim((string)($option['label'] ?? ''));
+            if ($label !== '' && $label !== $normalized) {
+                return [$label, true];
+            }
+
+            return [$normalizedValue, false];
+        }
+
+        return [$normalizedValue, false];
     }
 
     private function getCustomField(string $fieldUid): ?FieldInterface

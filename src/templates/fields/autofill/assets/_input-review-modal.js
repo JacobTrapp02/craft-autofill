@@ -11,8 +11,9 @@
             backdrop: document.querySelector('[data-autofill-review-backdrop]'),
             modal: document.querySelector('[data-autofill-review-modal]'),
             status: document.querySelector('[data-autofill-review-status]'),
+            errors: document.querySelector('[data-autofill-review-errors]'),
             field: document.querySelector('[data-autofill-review-field]'),
-            value: document.querySelector('[data-autofill-review-value]'),
+            editor: document.querySelector('[data-autofill-review-editor]'),
         };
 
         const hoistModalToBody = () => {
@@ -36,11 +37,23 @@
             if (modalState.status instanceof HTMLElement) {
                 modalState.status.textContent = '';
             }
-            if (modalState.field instanceof HTMLInputElement) {
-                modalState.field.value = '';
+            if (modalState.errors instanceof HTMLElement) {
+                modalState.errors.textContent = '';
+                modalState.errors.hidden = true;
             }
-            if (modalState.value instanceof HTMLTextAreaElement) {
-                modalState.value.value = '';
+            if (modalState.field instanceof HTMLElement) {
+                modalState.field.textContent = '';
+            }
+            if (modalState.editor instanceof HTMLElement) {
+                modalState.editor.innerHTML = '';
+            }
+        };
+
+        const finishReview = ({ reloadPage = false } = {}) => {
+            teardown();
+
+            if (reloadPage) {
+                window.location.reload();
             }
         };
 
@@ -78,8 +91,8 @@
             if (
                 !(modalState.modal instanceof HTMLElement) ||
                 !(modalState.status instanceof HTMLElement) ||
-                !(modalState.field instanceof HTMLInputElement) ||
-                !(modalState.value instanceof HTMLTextAreaElement)
+                !(modalState.field instanceof HTMLElement) ||
+                !(modalState.editor instanceof HTMLElement)
             ) {
                 return;
             }
@@ -87,11 +100,21 @@
             show();
             const current = suggestions[currentIndex];
             const validationErrors = Array.isArray(current.validationErrors) ? current.validationErrors : [];
-            modalState.status.textContent = validationErrors.length
-                ? `Suggestion ${currentIndex + 1} of ${suggestions.length} - ${validationErrors.join(' ')}`
-                : `Suggestion ${currentIndex + 1} of ${suggestions.length}`;
-            modalState.field.value = `${current.fieldName}${current.matchedHandle ? ` -> ${current.matchedHandle}` : ' (no matching field found)'}`;
-            modalState.value.value = String(current.value ?? '');
+            modalState.status.textContent = `${currentIndex + 1} of ${suggestions.length}`;
+            modalState.field.textContent = current.fieldName || '(Unmatched field)';
+            if (modalState.errors instanceof HTMLElement) {
+                if (validationErrors.length) {
+                    modalState.errors.textContent = validationErrors.join(' ');
+                    modalState.errors.hidden = false;
+                } else {
+                    modalState.errors.textContent = '';
+                    modalState.errors.hidden = true;
+                }
+            }
+            runtime.renderReviewEditor({
+                suggestion: current,
+                container: modalState.editor,
+            });
             focusMatchedField(current.matchedHandle);
         };
 
@@ -123,11 +146,14 @@
             }
 
             if (target.matches('[data-autofill-accept]')) {
-                if (!suggestions.length || !(modalState.value instanceof HTMLTextAreaElement)) {
+                if (!suggestions.length || !(modalState.editor instanceof HTMLElement)) {
                     return;
                 }
                 const current = suggestions[currentIndex];
-                current.value = modalState.value.value;
+                current.value = runtime.readReviewEditorValue({
+                    suggestion: current,
+                    container: modalState.editor,
+                });
                 if (current.matchedHandle) {
                     try {
                         await applySuggestion({
@@ -146,7 +172,7 @@
                     currentIndex += 1;
                     renderCurrent();
                 } else {
-                    teardown();
+                    finishReview({ reloadPage: true });
                 }
                 return;
             }
@@ -159,7 +185,7 @@
                     currentIndex += 1;
                     renderCurrent();
                 } else {
-                    teardown();
+                    finishReview({ reloadPage: true });
                 }
                 return;
             }

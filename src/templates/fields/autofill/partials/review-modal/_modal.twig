@@ -1,0 +1,38 @@
+<div class="autofill-review-modal-backdrop" data-autofill-review-backdrop hidden></div>
+
+<div class="autofill-review-modal" data-autofill-review-modal hidden>
+    <div class="autofill-review-modal__header">
+        <h2 class="autofill-review-modal__title">Suggestion Review</h2>
+        <p class="autofill-review-modal__counter" data-autofill-review-status></p>
+    </div>
+    <div class="autofill-review-modal__body ltr">
+        <div class="autofill-review-modal__field" data-autofill-review-field></div>
+        <p class="autofill-review-modal__errors" data-autofill-review-errors hidden></p>
+        <div data-autofill-review-editor></div>
+    </div>
+    <div class="autofill-review-modal__buttons">
+        <button type="button" class="btn submit" data-autofill-accept>Accept</button>
+        <button type="button" class="btn" data-autofill-reject>Reject</button>
+        <button type="button" class="btn" data-autofill-prev>Prev</button>
+        <button type="button" class="btn" data-autofill-next>Next</button>
+        <button type="button" class="btn" data-autofill-close>Close</button>
+    </div>
+</div>
+
+<div data-autofill-review-templates hidden>
+    <template data-autofill-review-template="textarea">
+        {% include 'autofill/fields/autofill/partials/review-modal/editors/_textarea.twig' %}
+    </template>
+    <template data-autofill-review-template="dropdown">
+        {% include 'autofill/fields/autofill/partials/review-modal/editors/_dropdown.twig' %}
+    </template>
+    <template data-autofill-review-template="date">
+        {% include 'autofill/fields/autofill/partials/review-modal/editors/_date.twig' %}
+    </template>
+    <template data-autofill-review-template="datetime">
+        {% include 'autofill/fields/autofill/partials/review-modal/editors/_datetime.twig' %}
+    </template>
+    <template data-autofill-review-template="lightswitch">
+        {% include 'autofill/fields/autofill/partials/review-modal/editors/_lightswitch.twig' %}
+    </template>
+</div>

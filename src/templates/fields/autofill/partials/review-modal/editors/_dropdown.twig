@@ -1,0 +1,10 @@
+{% import '_includes/forms.twig' as forms %}
+
+{{ forms.select({
+    options: [],
+    inputAttributes: {
+        data: {
+            'autofill-review-input': 'dropdown',
+        },
+    },
+}) }}
