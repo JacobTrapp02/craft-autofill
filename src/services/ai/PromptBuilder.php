@@ -79,7 +79,7 @@ class PromptBuilder extends Component
             '3) Context fields (read-only)',
             '4) Generation rows to fill',
             '',
-            'Return only valid JSON as an array of objects in generation row order.',
+            'Return only valid JSON as an object with a suggestions array in generation row order.',
             'Each object must include: fieldName, value.',
             'Do not include markdown or explanations.',
         ]);
@@ -105,7 +105,7 @@ class PromptBuilder extends Component
             Json::encode($activeRows, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES),
             '',
             'RESPONSE_FORMAT_JSON',
-            '[{"fieldName":"Example Field","value":"..."}]',
+            '{"suggestions":[{"fieldName":"Example Field","value":"..."}]}',
         ]);
     }
 

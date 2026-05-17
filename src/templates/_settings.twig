@@ -30,6 +30,14 @@
     }) %}
 {% endfor %}
 
+{{ forms.lightswitchField({
+    label: 'Enable Test Mode',
+    instructions: 'When enabled, editors can preview prompts and manually paste model responses for low-cost testing. When disabled, the Autofill button sends live AI requests directly.',
+    id: 'testMode',
+    name: 'testMode',
+    on: settings.testMode ?? true,
+}) }}
+
 {{ forms.editableTableField({
     label: 'AI Model Configurations',
     instructions: 'Add one or more model configs. Store API keys as env var references like `$OPENAI_API_KEY`. The first enabled row is treated as the default.',

@@ -219,7 +219,12 @@ class AiResponseNormalizer extends Component
             return $suggestions;
         }
 
-        throw new InvalidArgumentException('Response must be a JSON array or an object with a suggestions array.');
+        $result = $parsed['result'] ?? null;
+        if (is_array($result) && array_is_list($result)) {
+            return $result;
+        }
+
+        throw new InvalidArgumentException('Response must be a JSON array or an object with a suggestions/result array.');
     }
 
     /**

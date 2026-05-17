@@ -11,11 +11,12 @@
     const previewOutput = root.querySelector('[data-autofill-preview]');
     const responseInput = root.querySelector('[data-autofill-response-input]');
     const parseResponseButton = root.querySelector('[data-autofill-parse-response]');
-    if (!(generateButton instanceof HTMLButtonElement) || !(userPromptInput instanceof HTMLTextAreaElement) || !(previewOutput instanceof HTMLTextAreaElement)) {
+    if (!(generateButton instanceof HTMLButtonElement) || !(userPromptInput instanceof HTMLTextAreaElement)) {
         return;
     }
 
     const config = window.__autofillPreviewConfig || {};
+    const isTestMode = config.testMode !== false;
     const applySuggestionServer = async (suggestion) => {
         const applySuggestionActionUrl = config.applySuggestionActionUrl || '';
         const fieldId = Number(config.fieldId || 0);
@@ -42,32 +43,63 @@
     });
     runtime.positionActiveReviewModal = reviewModal.positionBelowField;
 
+    const startReviewFlow = async (suggestions) => {
+        const reviewSuggestions = await runtime.collectReviewRequiredSuggestions(suggestions, applySuggestionServer);
+        reviewModal.setSuggestions(reviewSuggestions);
+    };
+
     generateButton.addEventListener('click', async () => {
-        const promptPreviewActionUrl = config.promptPreviewActionUrl || '';
         const fieldId = Number(config.fieldId || 0);
-        if (!promptPreviewActionUrl || !fieldId) {
-            window.alert('Prompt preview endpoint is not configured.');
+        if (!fieldId) {
+            window.alert('Autofill field is not configured.');
             return;
         }
 
         generateButton.disabled = true;
-        previewOutput.value = 'Building prompt preview...';
-
         try {
-            previewOutput.value = await runtime.buildPromptPreview({
-                endpoint: promptPreviewActionUrl,
+            if (isTestMode) {
+                const promptPreviewActionUrl = config.promptPreviewActionUrl || '';
+                if (!(previewOutput instanceof HTMLTextAreaElement) || !promptPreviewActionUrl) {
+                    window.alert('Prompt preview endpoint is not configured.');
+                    return;
+                }
+
+                previewOutput.value = 'Building prompt preview...';
+                previewOutput.value = await runtime.buildPromptPreview({
+                    endpoint: promptPreviewActionUrl,
+                    fieldId,
+                    userPrompt: userPromptInput.value,
+                });
+                return;
+            }
+
+            const generateSuggestionsActionUrl = config.generateSuggestionsActionUrl || '';
+            if (!generateSuggestionsActionUrl) {
+                window.alert('AI generate endpoint is not configured.');
+                return;
+            }
+
+            const suggestions = await runtime.generateSuggestions({
+                endpoint: generateSuggestionsActionUrl,
                 fieldId,
                 userPrompt: userPromptInput.value,
+                entryId: Number(config.entryId || 0),
+                siteId: Number(config.siteId || 0) || null,
             });
+            await startReviewFlow(suggestions);
         } catch (error) {
-            previewOutput.value = '';
-            window.alert(error instanceof Error ? error.message : 'Could not build prompt preview.');
+            if (previewOutput instanceof HTMLTextAreaElement && isTestMode) {
+                previewOutput.value = '';
+            }
+            reviewModal.clear();
+            window.alert(error instanceof Error ? error.message : 'Could not complete Autofill request.');
         } finally {
             generateButton.disabled = false;
         }
     });
 
     if (
+        isTestMode &&
         parseResponseButton instanceof HTMLButtonElement &&
         responseInput instanceof HTMLTextAreaElement
     ) {
@@ -86,8 +118,7 @@
                     fieldId,
                     rawResponse: responseInput.value,
                 });
-                const reviewSuggestions = await runtime.collectReviewRequiredSuggestions(suggestions, applySuggestionServer);
-                reviewModal.setSuggestions(reviewSuggestions);
+                await startReviewFlow(suggestions);
             } catch (error) {
                 reviewModal.clear();
                 window.alert(error instanceof Error ? error.message : 'Could not normalize response.');

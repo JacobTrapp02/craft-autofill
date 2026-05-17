@@ -52,6 +52,16 @@
         return Array.isArray(data.suggestions) ? data.suggestions : [];
     };
 
+    runtime.generateSuggestions = async ({ endpoint, fieldId, userPrompt, entryId, siteId }) => {
+        const data = await postJson(
+            endpoint,
+            { userPrompt, fieldId, entryId, siteId },
+            'Could not generate suggestions.',
+        );
+
+        return Array.isArray(data.suggestions) ? data.suggestions : [];
+    };
+
     runtime.applySuggestionViaServer = async ({ endpoint, fieldId, entryId, siteId, suggestion }) => {
         const data = await postJson(
             endpoint,

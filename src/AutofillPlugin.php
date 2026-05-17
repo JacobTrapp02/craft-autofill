@@ -9,6 +9,7 @@ use craft\events\RegisterComponentTypesEvent;
 use craft\services\Fields;
 use jtdev\craftautofill\fields\AutofillField;
 use jtdev\craftautofill\models\Settings;
+use jtdev\craftautofill\services\ai\AiRequestLogService;
 use jtdev\craftautofill\services\ai\AiService;
 use jtdev\craftautofill\services\entries\EntrySuggestionApplyService;
 use jtdev\craftautofill\services\fields\FieldAdapterService;
@@ -20,6 +21,7 @@ use yii\base\Event;
  *
  * @method static AutofillPlugin getInstance()
  * @method Settings getSettings()
+ * @method AiRequestLogService getAiRequestLogService()
  * @method AiService getAiService()
  * @method EntrySuggestionApplyService getEntrySuggestionApplyService()
  * @method FieldAdapterService getFieldAdapterService()
@@ -37,6 +39,7 @@ class AutofillPlugin extends Plugin
     {
         return [
             'components' => [
+                'aiRequestLogService' => AiRequestLogService::class,
                 'aiService' => AiService::class,
                 'entrySuggestionApplyService' => EntrySuggestionApplyService::class,
                 'fieldAdapterService' => FieldAdapterService::class,
@@ -74,6 +77,11 @@ class AutofillPlugin extends Plugin
     public function getAiService(): AiService
     {
         return $this->get('aiService');
+    }
+
+    public function getAiRequestLogService(): AiRequestLogService
+    {
+        return $this->get('aiRequestLogService');
     }
 
     public function getFieldAdapterService(): FieldAdapterService

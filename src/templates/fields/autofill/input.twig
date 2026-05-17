@@ -2,17 +2,24 @@
     fieldId: field.id ?? null,
     entryId: element.id ?? null,
     siteId: element.siteId ?? null,
+    testMode: testMode ?? true,
     promptPreviewActionUrl: actionUrl('autofill/prompt-preview/build-prompt'),
+    generateSuggestionsActionUrl: actionUrl('autofill/prompt-preview/generate-suggestions'),
     responseNormalizeActionUrl: actionUrl('autofill/response-preview/normalize-response'),
     applySuggestionActionUrl: actionUrl('autofill/response-preview/apply-suggestion'),
 } %}
+{% set isTestMode = testMode ?? true %}
 
 <div class="autofill-runtime" data-autofill-runtime>
     <div class="field">
         <div class="heading">
             <label for="autofill-user-prompt-{{ field.handle }}">Prompt</label>
             <div class="instructions">
-                <p>Enter user input/context, then click Generate to preview the exact prompt payload (no AI request is sent).</p>
+                {% if isTestMode %}
+                    <p>Enter user input/context, then click Generate to preview the exact prompt payload (no AI request is sent).</p>
+                {% else %}
+                    <p>Enter user input/context, then click Autofill to generate and review suggestions.</p>
+                {% endif %}
             </div>
         </div>
         <div class="input ltr">
@@ -27,39 +34,41 @@
     </div>
 
     <div class="buttons">
-        <button type="button" class="btn submit" data-autofill-generate>Generate</button>
+        <button type="button" class="btn submit" data-autofill-generate>{{ isTestMode ? 'Generate' : 'Autofill' }}</button>
     </div>
 
-    <div class="field">
-        <div class="heading">
-            <label>Built Prompt Preview</label>
-        </div>
-        <div class="input ltr">
-            <textarea class="text fullwidth code" rows="16" readonly data-autofill-preview placeholder="Preview appears here after clicking Generate."></textarea>
-        </div>
-    </div>
-
-    <div class="field">
-        <div class="heading">
-            <label for="autofill-response-input-{{ field.handle }}">Test Response Input</label>
-            <div class="instructions">
-                <p>Paste AI JSON response here, then click Parse + Start Review.</p>
+    {% if isTestMode %}
+        <div class="field">
+            <div class="heading">
+                <label>Built Prompt Preview</label>
+            </div>
+            <div class="input ltr">
+                <textarea class="text fullwidth code" rows="16" readonly data-autofill-preview placeholder="Preview appears here after clicking Generate."></textarea>
             </div>
         </div>
-        <div class="input ltr">
-            <textarea
-                id="autofill-response-input-{{ field.handle }}"
-                class="text fullwidth code"
-                rows="8"
-                data-autofill-response-input
-                placeholder='[{"fieldName":"Phone Number","value":"555-123-4567"}]'
-            ></textarea>
-        </div>
-    </div>
 
-    <div class="buttons">
-        <button type="button" class="btn" data-autofill-parse-response>Parse + Start Review</button>
-    </div>
+        <div class="field">
+            <div class="heading">
+                <label for="autofill-response-input-{{ field.handle }}">Test Response Input</label>
+                <div class="instructions">
+                    <p>Paste AI JSON response here, then click Parse + Start Review.</p>
+                </div>
+            </div>
+            <div class="input ltr">
+                <textarea
+                    id="autofill-response-input-{{ field.handle }}"
+                    class="text fullwidth code"
+                    rows="8"
+                    data-autofill-response-input
+                    placeholder='[{"fieldName":"Phone Number","value":"555-123-4567"}]'
+                ></textarea>
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button type="button" class="btn" data-autofill-parse-response>Parse + Start Review</button>
+        </div>
+    {% endif %}
 
 </div>
 

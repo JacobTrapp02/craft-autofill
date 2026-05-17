@@ -57,14 +57,28 @@ class AiService extends Component
 
     public function generateFromRequest(AiGenerationRequest $request, Model $providerConfig): AiGenerationResult
     {
+        $result = $this->generateFromRequestDetailed($request, $providerConfig);
+
+        return $result['result'];
+    }
+
+    /**
+     * @return array{result:AiGenerationResult,rawResponse:array}
+     */
+    public function generateFromRequestDetailed(AiGenerationRequest $request, Model $providerConfig): array
+    {
         if (!$request->validate()) {
             throw new RuntimeException('AI generation request validation failed.');
         }
 
         $provider = $this->resolveProvider($this->getProviderKeyForConfig($providerConfig));
         $rawResponse = $provider->generate($request, $providerConfig);
+        $result = $this->responseNormalizer->normalize($rawResponse, $request);
 
-        return $this->responseNormalizer->normalize($rawResponse, $request);
+        return [
+            'result' => $result,
+            'rawResponse' => $rawResponse,
+        ];
     }
 
     // Provider registry stuff

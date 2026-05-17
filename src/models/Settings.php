@@ -11,6 +11,8 @@ use jtdev\craftautofill\models\ai\OpenAiConfig;
  */
 class Settings extends Model
 {
+    public bool $testMode = false;
+
     /**
      * @var array<int, array<string, mixed>>
      */
@@ -25,6 +27,7 @@ class Settings extends Model
     public function rules(): array
     {
         return [
+            ['testMode', 'boolean'],
             ['modelConfigs', 'validateModelConfigs'],
         ];
     }
