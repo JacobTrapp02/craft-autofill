@@ -68,6 +68,8 @@ class AutofillPlugin extends Plugin
 
     protected function settingsHtml(): ?string
     {
+        $this->hydrateServerEnvKeysForAutosuggest();
+
         return Craft::$app->view->renderTemplate('autofill/_settings.twig', [
             'plugin' => $this,
             'settings' => $this->getSettings(),
@@ -108,5 +110,39 @@ class AutofillPlugin extends Plugin
                 $event->types[] = AutofillField::class;
             }
         );
+    }
+
+    /**
+     * Craft's env autosuggest sources variables from $_SERVER keys.
+     * Mirror keys from other env sources so plugin settings autosuggest is reliable.
+     */
+    private function hydrateServerEnvKeysForAutosuggest(): void
+    {
+        $candidates = [];
+
+        if (is_array($_ENV)) {
+            foreach ($_ENV as $key => $value) {
+                if (!is_string($key) || $key === '' || !is_scalar($value)) {
+                    continue;
+                }
+                $candidates[$key] = (string)$value;
+            }
+        }
+
+        $all = getenv();
+        if (is_array($all)) {
+            foreach ($all as $key => $value) {
+                if (!is_string($key) || $key === '' || !is_scalar($value)) {
+                    continue;
+                }
+                $candidates[$key] = (string)$value;
+            }
+        }
+
+        foreach ($candidates as $key => $value) {
+            if (!array_key_exists($key, $_SERVER)) {
+                $_SERVER[$key] = $value;
+            }
+        }
     }
 }

@@ -4,9 +4,16 @@
 {% set supportedFieldOptions = [{ label: 'Select a field', value: '' }] %}
 {% set supportedFieldTypeMap = {} %}
 {% for supportedField in supportedFields %}
+    {% set fieldName = supportedField.name ?? '' %}
+    {% set fieldHandle = supportedField.handle ?? '' %}
+    {% set optionLabel = fieldName %}
+    {% if fieldHandle != '' %}
+        {% set optionLabel = fieldName ~ ' (' ~ fieldHandle ~ ')' %}
+    {% endif %}
+
     {% set supportedFieldOptions = supportedFieldOptions|merge([
         {
-            label: supportedField.name,
+            label: optionLabel,
             value: supportedField.uid,
             fieldType: supportedField.adapter,
         }
@@ -45,6 +52,25 @@
     options: modelConfigOptions,
     value: field.modelConfigUid,
     errors: field.getErrors('modelConfigUid'),
+}) }}
+
+{{ forms.lightswitchField({
+    label: 'Show Prompt Input Box',
+    instructions: 'When enabled, editors can provide extra prompt/context before running Autofill.',
+    id: 'showUserPromptInput',
+    name: 'showUserPromptInput',
+    on: field.showUserPromptInput ?? true,
+    errors: field.getErrors('showUserPromptInput'),
+}) }}
+
+{{ forms.textField({
+    label: 'Action Button Label',
+    instructions: 'Optional override for the primary action button text shown in the entry editor.',
+    id: 'actionButtonLabel',
+    name: 'actionButtonLabel',
+    value: field.actionButtonLabel,
+    placeholder: 'Autofill',
+    errors: field.getErrors('actionButtonLabel'),
 }) }}
 
 {% set rowErrors = field.getErrors('rows') %}

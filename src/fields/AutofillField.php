@@ -7,6 +7,7 @@ namespace jtdev\craftautofill\fields;
 use Craft;
 use craft\base\ElementInterface;
 use craft\base\Field;
+use craft\base\FieldInterface;
 use craft\models\EntryType;
 use jtdev\craftautofill\AutofillPlugin;
 
@@ -15,6 +16,8 @@ class AutofillField extends Field
     public string $entryTypeUid = '';
     public string $modelConfigUid = '';
     public string $globalPrompt = '';
+    public string $actionButtonLabel = '';
+    public bool $showUserPromptInput = true;
 
     /**
      * @var array<int, array<string, mixed>>
@@ -55,6 +58,8 @@ class AutofillField extends Field
     {
         parent::init();
         $this->globalPrompt = trim($this->globalPrompt);
+        $this->actionButtonLabel = trim($this->actionButtonLabel);
+        $this->showUserPromptInput = $this->toBool($this->showUserPromptInput);
         $this->rows = $this->normalizeRows($this->rows);
         $this->contextRows = $this->normalizeContextRows($this->contextRows);
     }
@@ -62,8 +67,10 @@ class AutofillField extends Field
     protected function defineRules(): array
     {
         $rules = parent::defineRules();
-        $rules[] = [['entryTypeUid', 'modelConfigUid', 'globalPrompt'], 'string'];
+        $rules[] = [['entryTypeUid', 'modelConfigUid', 'globalPrompt', 'actionButtonLabel'], 'string'];
+        $rules[] = ['showUserPromptInput', 'boolean'];
         $rules[] = ['globalPrompt', 'filter', 'filter' => 'trim'];
+        $rules[] = ['actionButtonLabel', 'filter', 'filter' => 'trim'];
         $rules[] = ['rows', 'validateRows'];
         $rules[] = ['contextRows', 'validateContextRows'];
         $rules[] = [['rows', 'contextRows'], 'validateUniqueFieldSelections'];
@@ -76,12 +83,16 @@ class AutofillField extends Field
     public function getSettingsHtml(): ?string
     {
         $selectedEntryType = $this->getSelectedEntryType();
+        $supportedFields = $selectedEntryType
+            ? AutofillPlugin::getInstance()->getFieldDiscoveryService()->getSupportedEntryTypeFields($selectedEntryType)
+            : [];
+        $supportedFields = $this->mergeMissingSelectedFields($supportedFields);
 
         return Craft::$app->getView()->renderTemplate('autofill/fields/autofill/settings.twig', [
             'field' => $this,
             'entryTypeOptions' => $this->getEntryTypeOptions(),
             'modelConfigOptions' => $this->getModelConfigOptions(),
-            'supportedFields' => $selectedEntryType ? AutofillPlugin::getInstance()->getFieldDiscoveryService()->getSupportedEntryTypeFields($selectedEntryType) : [],
+            'supportedFields' => $supportedFields,
             'rows' => $this->rows,
             'contextRows' => $this->contextRows,
         ]);
@@ -362,5 +373,71 @@ class AutofillField extends Field
         }
 
         return false;
+    }
+
+    /**
+     * Ensures fields already selected in saved rows remain selectable, even if discovery omitted them.
+     *
+     * @param array<int, array<string, mixed>> $supportedFields
+     * @return array<int, array<string, mixed>>
+     */
+    private function mergeMissingSelectedFields(array $supportedFields): array
+    {
+        $uidsToEnsure = [];
+        foreach ($this->rows as $row) {
+            $uid = trim((string)($row['targetFieldUid'] ?? ''));
+            if ($uid !== '') {
+                $uidsToEnsure[$uid] = true;
+            }
+        }
+
+        foreach ($this->contextRows as $row) {
+            $uid = trim((string)($row['fieldUid'] ?? ''));
+            if ($uid !== '') {
+                $uidsToEnsure[$uid] = true;
+            }
+        }
+
+        if ($uidsToEnsure === []) {
+            return $supportedFields;
+        }
+
+        $existingByUid = [];
+        foreach ($supportedFields as $fieldMeta) {
+            $uid = trim((string)($fieldMeta['uid'] ?? ''));
+            if ($uid !== '') {
+                $existingByUid[$uid] = true;
+            }
+        }
+
+        $adapterService = AutofillPlugin::getInstance()->getFieldAdapterService();
+
+        foreach (array_keys($uidsToEnsure) as $uid) {
+            if (isset($existingByUid[$uid])) {
+                continue;
+            }
+
+            $field = Craft::$app->getFields()->getFieldByUid($uid);
+            if (!$field instanceof FieldInterface) {
+                continue;
+            }
+
+            $adapter = $adapterService->getAdapterForField($field);
+            if ($adapter === null) {
+                continue;
+            }
+
+            $supportedFields[] = [
+                'uid' => (string)($field->uid ?? ''),
+                'handle' => (string)($field->handle ?? ''),
+                'name' => (string)($field->name ?? ''),
+                'type' => $field::class,
+                'adapter' => $adapter->getKey(),
+                'availableInFreeVersion' => $adapter->isAvailableInFreeVersion(),
+            ];
+            $existingByUid[$uid] = true;
+        }
+
+        return $supportedFields;
     }
 }

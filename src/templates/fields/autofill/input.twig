@@ -9,32 +9,29 @@
     applySuggestionActionUrl: actionUrl('autofill/response-preview/apply-suggestion'),
 } %}
 {% set isTestMode = testMode ?? true %}
+{% set showUserPromptInput = field.showUserPromptInput ?? true %}
+{% set defaultActionLabel = isTestMode ? 'Generate' : 'Autofill' %}
+{% set actionButtonLabel = field.actionButtonLabel|trim ?: defaultActionLabel %}
 
 <div class="autofill-runtime" data-autofill-runtime>
-    <div class="field">
-        <div class="heading">
-            <label for="autofill-user-prompt-{{ field.handle }}">Prompt</label>
-            <div class="instructions">
-                {% if isTestMode %}
-                    <p>Enter user input/context, then click Generate to preview the exact prompt payload (no AI request is sent).</p>
-                {% else %}
-                    <p>Enter user input/context, then click Autofill to generate and review suggestions.</p>
-                {% endif %}
+    <div class="autofill-runtime__primary">
+        {% if showUserPromptInput %}
+            <div class="field">
+                <div class="input ltr">
+                    <textarea
+                        id="autofill-user-prompt-{{ field.handle }}"
+                        class="text fullwidth"
+                        rows="5"
+                        data-autofill-user-prompt
+                        placeholder="Type your request/context here..."
+                    ></textarea>
+                </div>
             </div>
-        </div>
-        <div class="input ltr">
-            <textarea
-                id="autofill-user-prompt-{{ field.handle }}"
-                class="text fullwidth"
-                rows="5"
-                data-autofill-user-prompt
-                placeholder="Type your request/context here..."
-            ></textarea>
-        </div>
-    </div>
+        {% endif %}
 
-    <div class="buttons">
-        <button type="button" class="btn submit" data-autofill-generate>{{ isTestMode ? 'Generate' : 'Autofill' }}</button>
+        <div class="buttons">
+            <button type="button" class="btn submit" data-autofill-generate>{{ actionButtonLabel }}</button>
+        </div>
     </div>
 
     {% if isTestMode %}
@@ -75,6 +72,23 @@
 {% include 'autofill/fields/autofill/partials/_review-modal.twig' %}
 
 {% css %}
+.autofill-runtime {
+    margin-bottom: 18px;
+}
+
+.autofill-runtime__primary {
+    display: grid;
+    gap: 8px;
+}
+
+.autofill-runtime__primary .field {
+    margin-bottom: 0;
+}
+
+.autofill-runtime__primary .buttons {
+    margin-top: 0;
+}
+
 .autofill-review-modal-backdrop {
     position: fixed;
     inset: 0;

@@ -11,7 +11,7 @@
     const previewOutput = root.querySelector('[data-autofill-preview]');
     const responseInput = root.querySelector('[data-autofill-response-input]');
     const parseResponseButton = root.querySelector('[data-autofill-parse-response]');
-    if (!(generateButton instanceof HTMLButtonElement) || !(userPromptInput instanceof HTMLTextAreaElement)) {
+    if (!(generateButton instanceof HTMLButtonElement)) {
         return;
     }
 
@@ -42,6 +42,9 @@
         focusMatchedField: runtime.focusMatchedField,
     });
     runtime.positionActiveReviewModal = reviewModal.positionBelowField;
+    const currentUserPrompt = () => (
+        userPromptInput instanceof HTMLTextAreaElement ? userPromptInput.value : ''
+    );
 
     const startReviewFlow = async (suggestions) => {
         const reviewSuggestions = await runtime.collectReviewRequiredSuggestions(suggestions, applySuggestionServer);
@@ -68,7 +71,7 @@
                 previewOutput.value = await runtime.buildPromptPreview({
                     endpoint: promptPreviewActionUrl,
                     fieldId,
-                    userPrompt: userPromptInput.value,
+                    userPrompt: currentUserPrompt(),
                 });
                 return;
             }
@@ -82,7 +85,7 @@
             const suggestions = await runtime.generateSuggestions({
                 endpoint: generateSuggestionsActionUrl,
                 fieldId,
-                userPrompt: userPromptInput.value,
+                userPrompt: currentUserPrompt(),
                 entryId: Number(config.entryId || 0),
                 siteId: Number(config.siteId || 0) || null,
             });
