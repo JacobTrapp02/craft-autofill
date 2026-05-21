@@ -77,6 +77,7 @@ class FieldDiscoveryService extends Component
 
         foreach ($fieldLayout->getCustomFields() as $field) {
             $adapter = $this->fieldAdapterService->getAdapterForField($field);
+
             if ($adapter === null) {
                 continue;
             }

@@ -333,7 +333,7 @@ class AiResponseNormalizer extends Component
         $options = $fieldContract['options'] ?? null;
         if (is_array($options) && $options !== []) {
             return [
-                'type' => 'dropdown',
+                'type' => $adapterKey === 'buttonGroup' ? 'buttonGroup' : 'dropdown',
                 'source' => 'contract:options',
                 'displayValue' => $displayValueIsLabel ? $displayValue : (string)$normalizedValue,
                 'options' => $this->normalizeReviewOptions($options),
@@ -454,6 +454,13 @@ class AiResponseNormalizer extends Component
         $format = (string)($fieldContract['format'] ?? '');
         if (in_array($format, ['date', 'date-time'], true) && strtotime((string)$rawValue) === false) {
             $errors[] = 'Suggestion value must be a valid date.';
+        }
+
+        if ($format === 'email') {
+            $candidate = trim((string)$rawValue);
+            if ($candidate === '' || filter_var($candidate, FILTER_VALIDATE_EMAIL) === false) {
+                $errors[] = 'Suggestion value must be a valid email address.';
+            }
         }
 
         $options = $fieldContract['options'] ?? null;

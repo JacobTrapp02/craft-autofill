@@ -208,6 +208,80 @@
         },
     });
 
+    const createButtonGroupRenderer = () => ({
+        render({ suggestion, editorConfig, container }) {
+            const usedTemplate = mountTemplate('buttonGroup', container);
+            const wrapper = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="button-group"]')
+                : null;
+
+            const host = wrapper instanceof HTMLElement ? wrapper : container;
+            host.innerHTML = '';
+            host.classList.add('autofill-review-editor-button-group');
+
+            const options = Array.isArray(editorConfig.options) ? editorConfig.options : [];
+            const normalizedValue = asString(suggestion.value ?? '');
+
+            for (const option of options) {
+                if (!option || typeof option !== 'object') {
+                    continue;
+                }
+
+                const optionValue = asString(option.value ?? '');
+                const optionLabel = asString(option.label ?? optionValue);
+                if (optionValue === '') {
+                    continue;
+                }
+
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'btn';
+                button.dataset.autofillReviewInput = 'button-group-option';
+                button.dataset.value = optionValue;
+                button.textContent = optionLabel === '' ? optionValue : optionLabel;
+                if (optionValue === normalizedValue) {
+                    button.classList.add('active');
+                    button.setAttribute('aria-pressed', 'true');
+                } else {
+                    button.setAttribute('aria-pressed', 'false');
+                }
+
+                button.addEventListener('click', () => {
+                    host.querySelectorAll('[data-autofill-review-input="button-group-option"]').forEach((node) => {
+                        if (!(node instanceof HTMLElement)) {
+                            return;
+                        }
+                        node.classList.remove('active');
+                        node.setAttribute('aria-pressed', 'false');
+                    });
+
+                    button.classList.add('active');
+                    button.setAttribute('aria-pressed', 'true');
+                    host.dataset.selectedValue = optionValue;
+                });
+
+                host.appendChild(button);
+            }
+
+            host.dataset.selectedValue = normalizedValue;
+        },
+        readValue({ suggestion, container }) {
+            const wrapper = container.querySelector('[data-autofill-review-input="button-group"]');
+            const host = wrapper instanceof HTMLElement ? wrapper : container;
+            const selected = host.querySelector('[data-autofill-review-input="button-group-option"].active');
+            if (selected instanceof HTMLElement) {
+                return asString(selected.dataset.value || '');
+            }
+
+            const fallback = asString(host.dataset.selectedValue || '');
+            if (fallback !== '') {
+                return fallback;
+            }
+
+            return asString(suggestion?.value ?? '');
+        },
+    });
+
     const createDateRenderer = () => ({
         render({ suggestion, container }) {
             const usedTemplate = mountTemplate('date', container);
@@ -352,6 +426,7 @@
     const reviewRenderers = {
         textarea: createTextareaRenderer(),
         dropdown: createDropdownRenderer(),
+        buttonGroup: createButtonGroupRenderer(),
         date: createDateRenderer(),
         datetime: createDateTimeRenderer(),
         lightswitch: createLightswitchRenderer(),
