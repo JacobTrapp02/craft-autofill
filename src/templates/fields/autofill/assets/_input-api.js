@@ -32,10 +32,10 @@
         return data;
     };
 
-    runtime.buildPromptPreview = async ({ endpoint, fieldId, userPrompt }) => {
+    runtime.buildPromptPreview = async ({ endpoint, fieldId, userPrompt, entryId, siteId }) => {
         const data = await postJson(
             endpoint,
-            { userPrompt, fieldId },
+            { userPrompt, fieldId, entryId, siteId },
             'Could not build prompt preview.',
         );
 

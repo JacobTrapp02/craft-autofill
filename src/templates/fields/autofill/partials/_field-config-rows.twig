@@ -1,9 +1,11 @@
 <div class="field" data-autofill-row-settings-field>
     <div class="heading">
-        <label>Field Configuration Rows</label>
-        <div class="instructions">
-            <p>Configure rows in generation order. Each row maps one target field to prompt behavior.</p>
-        </div>
+        <label>
+            Field Configuration Rows
+            {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                tooltipText: 'Rows run in order. Each row targets one field and defines how AI should generate or review that field value.'
+            } only %}
+        </label>
     </div>
 
     {{ hiddenInput('rows', '') }}

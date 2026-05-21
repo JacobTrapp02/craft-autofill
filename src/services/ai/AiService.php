@@ -9,7 +9,7 @@ use craft\base\Model;
 use jtdev\craftautofill\models\ai\AiGenerationRequest;
 use jtdev\craftautofill\models\ai\AiGenerationResult;
 use jtdev\craftautofill\models\ai\OpenAiConfig;
-use jtdev\craftautofill\services\ai\providers\OpenAiProvider;
+use jtdev\craftautofill\services\ai\providers\openai\OpenAiProvider;
 use RuntimeException;
 
 class AiService extends Component
@@ -45,9 +45,14 @@ class AiService extends Component
         ));
     }
 
-    public function buildAutofillPromptPreview(string $userPrompt, int $fieldId): string
+    public function buildAutofillPromptPreview(
+        string $userPrompt,
+        int $fieldId,
+        ?int $entryId = null,
+        ?int $siteId = null,
+    ): string
     {
-        return $this->promptBuilder->buildAutofillPromptPreview($userPrompt, $fieldId);
+        return $this->promptBuilder->buildAutofillPromptPreview($userPrompt, $fieldId, $entryId, $siteId);
     }
 
     public function normalizeAutofillResponse(string $rawResponse, int $fieldId): AiGenerationResult

@@ -1,17 +1,21 @@
 <div class="field" data-autofill-context-settings-field>
     <div class="heading">
-        <label>Global Context</label>
-        <div class="instructions">
-            <p>Set shared instructions and optional context fields for all rows in this Autofill profile.</p>
-        </div>
+        <label>
+            Global Context
+            {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                tooltipText: 'Global context gives shared instructions and read-only reference fields that apply to all generation rows.'
+            } only %}
+        </label>
     </div>
 
     <div class="field">
         <div class="heading">
-            <label for="globalPrompt">Global Prompt</label>
-            <div class="instructions">
-                <p>Optional high-level instructions applied to all generation rows (for example, persona, tone, or quality rules).</p>
-            </div>
+            <label for="globalPrompt">
+                Global Prompt
+                {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                    tooltipText: 'Use this for shared constraints like tone, brand, quality rules, or compliance guidance.'
+                } only %}
+            </label>
         </div>
         <div class="input ltr">
             <textarea

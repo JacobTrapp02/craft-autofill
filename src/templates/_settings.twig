@@ -1,5 +1,8 @@
 {# @var plugin \jtdev\craftautofill\AutofillPlugin #}
 {# @var settings \jtdev\craftautofill\models\Settings #}
+{# @var openAiModelOptions array<int, array{label:string, value:string}>|null #}
+{# @var openAiModelDiscoveryError string|null #}
+{# @var openAiModelDiscoverySourceEnv string|null #}
 
 {% import '_includes/forms.twig' as forms %}
 
@@ -14,16 +17,38 @@
     { label: 'High', value: 'high' },
 ] %}
 
+{% set openAiModelOptions = openAiModelOptions ?? [] %}
+{% set hasModelOptions = openAiModelOptions|length > 1 %}
+
 {% set modelConfigRows = {} %}
 {% for config in settings.modelConfigs %}
     {% set rowId = config.uid ?? ('row-' ~ loop.index) %}
+    {% set rowModelId = config.modelId ?? '' %}
+    {% set rowModelIdOptions = openAiModelOptions %}
+    {% if hasModelOptions and rowModelId != '' %}
+        {% set hasCurrentModel = false %}
+        {% for option in rowModelIdOptions %}
+            {% if option.value == rowModelId %}
+                {% set hasCurrentModel = true %}
+            {% endif %}
+        {% endfor %}
+        {% if not hasCurrentModel %}
+            {% set rowModelIdOptions = rowModelIdOptions|merge([
+                { label: rowModelId ~ ' (saved)', value: rowModelId }
+            ]) %}
+        {% endif %}
+    {% endif %}
+
     {% set modelConfigRows = modelConfigRows|merge({
         (rowId): {
             uid: config.uid ?? '',
             label: config.label ?? '',
             provider: config.provider ?? 'openai',
             apiKeyEnv: config.apiKeyEnv ?? '',
-            modelId: config.modelId ?? '',
+            modelId: hasModelOptions ? {
+                value: rowModelId,
+                options: rowModelIdOptions,
+            } : rowModelId,
             reasoningEffort: config.reasoningEffort ?? '',
             enabled: config.enabled ?? true,
         }
@@ -68,9 +93,10 @@
             placeholder: '$OPENAI_API_KEY',
         },
         modelId: {
-            type: 'singleline',
+            type: hasModelOptions ? 'select' : 'singleline',
             heading: 'Model ID',
-            placeholder: 'gpt-4.1-mini',
+            placeholder: hasModelOptions ? null : 'gpt-4.1-mini',
+            options: hasModelOptions ? openAiModelOptions : null,
         },
         reasoningEffort: {
             type: 'select',
@@ -91,3 +117,17 @@
     fullWidth: true,
     errors: settings.getErrors('modelConfigs')|unique,
 }) }}
+
+{% if openAiModelDiscoveryError %}
+    <p class="warning has-icon" style="margin-top: 10px;">
+        {{ openAiModelDiscoveryError }}
+    </p>
+{% elseif hasModelOptions %}
+    <p class="light" style="margin-top: 10px;">
+        Loaded {{ openAiModelOptions|length - 1 }} OpenAI models using {{ openAiModelDiscoverySourceEnv ?: 'configured API key env' }}.
+    </p>
+{% else %}
+    <p class="light" style="margin-top: 10px;">
+        OpenAI model list unavailable. You can still enter Model IDs manually.
+    </p>
+{% endif %}

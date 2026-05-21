@@ -11,6 +11,7 @@ use jtdev\craftautofill\fields\AutofillField;
 use jtdev\craftautofill\models\Settings;
 use jtdev\craftautofill\services\ai\AiRequestLogService;
 use jtdev\craftautofill\services\ai\AiService;
+use jtdev\craftautofill\services\ai\providers\openai\OpenAiModelDiscoveryService;
 use jtdev\craftautofill\services\entries\EntrySuggestionApplyService;
 use jtdev\craftautofill\services\fields\FieldAdapterService;
 use jtdev\craftautofill\services\fields\FieldDiscoveryService;
@@ -23,6 +24,7 @@ use yii\base\Event;
  * @method Settings getSettings()
  * @method AiRequestLogService getAiRequestLogService()
  * @method AiService getAiService()
+ * @method OpenAiModelDiscoveryService getOpenAiModelDiscoveryService()
  * @method EntrySuggestionApplyService getEntrySuggestionApplyService()
  * @method FieldAdapterService getFieldAdapterService()
  * @method FieldDiscoveryService getFieldDiscoveryService()
@@ -41,6 +43,7 @@ class AutofillPlugin extends Plugin
             'components' => [
                 'aiRequestLogService' => AiRequestLogService::class,
                 'aiService' => AiService::class,
+                'openAiModelDiscoveryService' => OpenAiModelDiscoveryService::class,
                 'entrySuggestionApplyService' => EntrySuggestionApplyService::class,
                 'fieldAdapterService' => FieldAdapterService::class,
                 'fieldDiscoveryService' => FieldDiscoveryService::class,
@@ -69,10 +72,15 @@ class AutofillPlugin extends Plugin
     protected function settingsHtml(): ?string
     {
         $this->hydrateServerEnvKeysForAutosuggest();
+        $settings = $this->getSettings();
+        $modelDiscovery = $this->getOpenAiModelDiscoveryService()->discoverForSettings($settings);
 
         return Craft::$app->view->renderTemplate('autofill/_settings.twig', [
             'plugin' => $this,
-            'settings' => $this->getSettings(),
+            'settings' => $settings,
+            'openAiModelOptions' => $modelDiscovery['options'],
+            'openAiModelDiscoveryError' => $modelDiscovery['error'],
+            'openAiModelDiscoverySourceEnv' => $modelDiscovery['sourceEnv'],
         ]);
     }
 
@@ -84,6 +92,11 @@ class AutofillPlugin extends Plugin
     public function getAiRequestLogService(): AiRequestLogService
     {
         return $this->get('aiRequestLogService');
+    }
+
+    public function getOpenAiModelDiscoveryService(): OpenAiModelDiscoveryService
+    {
+        return $this->get('openAiModelDiscoveryService');
     }
 
     public function getFieldAdapterService(): FieldAdapterService

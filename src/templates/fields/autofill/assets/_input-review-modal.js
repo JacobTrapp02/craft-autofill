@@ -3,18 +3,59 @@
     window.AutofillInputRuntime = window.AutofillInputRuntime || {};
     const runtime = window.AutofillInputRuntime;
 
-    runtime.createReviewModal = ({ applySuggestion, focusMatchedField }) => {
+    runtime.createReviewModal = ({ applySuggestion, focusMatchedField, fieldId }) => {
         let suggestions = [];
         let currentIndex = 0;
+        let isLoading = false;
+        const normalizedFieldId = Number(fieldId || 0);
+        const fieldIdAttr = Number.isFinite(normalizedFieldId) && normalizedFieldId > 0
+            ? String(normalizedFieldId)
+            : '';
+
+        const byField = (selector) => {
+            if (fieldIdAttr === '') {
+                return document.querySelector(selector);
+            }
+            return document.querySelector(`${selector}[data-autofill-field-id="${fieldIdAttr}"]`);
+        };
 
         const modalState = {
-            backdrop: document.querySelector('[data-autofill-review-backdrop]'),
-            modal: document.querySelector('[data-autofill-review-modal]'),
-            status: document.querySelector('[data-autofill-review-status]'),
-            errors: document.querySelector('[data-autofill-review-errors]'),
-            field: document.querySelector('[data-autofill-review-field]'),
-            editor: document.querySelector('[data-autofill-review-editor]'),
+            backdrop: byField('[data-autofill-review-backdrop]'),
+            modal: byField('[data-autofill-review-modal]'),
+            status: null,
+            loading: null,
+            loadingText: null,
+            body: null,
+            buttons: null,
+            errors: null,
+            field: null,
+            editor: null,
         };
+
+        const setModalDisplayMode = (mode) => {
+            if (!(modalState.modal instanceof HTMLElement)) {
+                return;
+            }
+
+            const normalized = String(mode || '').trim().toLowerCase();
+            if (normalized === 'richtext') {
+                modalState.modal.classList.add('autofill-review-modal--richtext');
+                return;
+            }
+
+            modalState.modal.classList.remove('autofill-review-modal--richtext');
+        };
+
+        if (modalState.modal instanceof HTMLElement) {
+            modalState.status = modalState.modal.querySelector('[data-autofill-review-status]');
+            modalState.loading = modalState.modal.querySelector('[data-autofill-review-loading]');
+            modalState.loadingText = modalState.modal.querySelector('[data-autofill-review-loading-text]');
+            modalState.body = modalState.modal.querySelector('.autofill-review-modal__body');
+            modalState.buttons = modalState.modal.querySelector('.autofill-review-modal__buttons');
+            modalState.errors = modalState.modal.querySelector('[data-autofill-review-errors]');
+            modalState.field = modalState.modal.querySelector('[data-autofill-review-field]');
+            modalState.editor = modalState.modal.querySelector('[data-autofill-review-editor]');
+        }
 
         const hoistModalToBody = () => {
             if (modalState.backdrop instanceof HTMLElement && modalState.backdrop.parentElement !== document.body) {
@@ -34,8 +75,13 @@
             if (modalState.modal instanceof HTMLElement) {
                 modalState.modal.hidden = true;
             }
+            setModalDisplayMode('');
+            setLoadingState(false);
             if (modalState.status instanceof HTMLElement) {
                 modalState.status.textContent = '';
+            }
+            if (modalState.loadingText instanceof HTMLElement) {
+                modalState.loadingText.textContent = 'Waiting for response from AI...';
             }
             if (modalState.errors instanceof HTMLElement) {
                 modalState.errors.textContent = '';
@@ -47,6 +93,7 @@
             if (modalState.editor instanceof HTMLElement) {
                 modalState.editor.innerHTML = '';
             }
+            isLoading = false;
         };
 
         const finishReview = ({ reloadPage = false } = {}) => {
@@ -63,6 +110,47 @@
             }
             if (modalState.modal instanceof HTMLElement) {
                 modalState.modal.hidden = false;
+            }
+        };
+
+        const setLoadingState = (loading, message = '') => {
+            isLoading = Boolean(loading);
+            if (modalState.modal instanceof HTMLElement) {
+                if (isLoading) {
+                    modalState.modal.classList.add('is-loading');
+                } else {
+                    modalState.modal.classList.remove('is-loading');
+                }
+            }
+            if (modalState.loading instanceof HTMLElement) {
+                modalState.loading.hidden = !isLoading;
+            }
+            if (modalState.loadingText instanceof HTMLElement) {
+                modalState.loadingText.textContent = String(message || 'Waiting for response from AI...');
+            }
+            if (modalState.body instanceof HTMLElement) {
+                modalState.body.hidden = isLoading;
+            }
+            if (modalState.buttons instanceof HTMLElement) {
+                modalState.buttons.hidden = isLoading;
+            }
+        };
+
+        const showLoading = (message = 'Waiting for response from AI...') => {
+            show();
+            setLoadingState(true, message);
+            if (modalState.status instanceof HTMLElement) {
+                modalState.status.textContent = '';
+            }
+            if (modalState.errors instanceof HTMLElement) {
+                modalState.errors.textContent = '';
+                modalState.errors.hidden = true;
+            }
+            if (modalState.field instanceof HTMLElement) {
+                modalState.field.textContent = '';
+            }
+            if (modalState.editor instanceof HTMLElement) {
+                modalState.editor.innerHTML = '';
             }
         };
 
@@ -97,9 +185,12 @@
                 return;
             }
 
+            setLoadingState(false);
             show();
             const current = suggestions[currentIndex];
             const validationErrors = Array.isArray(current.validationErrors) ? current.validationErrors : [];
+            const displayMode = current?.reviewEditor?.displayMode || '';
+            setModalDisplayMode(displayMode);
             modalState.status.textContent = `${currentIndex + 1} of ${suggestions.length}`;
             modalState.field.textContent = current.fieldName || '(Unmatched field)';
             if (modalState.errors instanceof HTMLElement) {
@@ -125,6 +216,7 @@
         };
 
         const setSuggestions = (nextSuggestions) => {
+            setLoadingState(false);
             suggestions = Array.isArray(nextSuggestions) ? nextSuggestions : [];
             currentIndex = 0;
             if (suggestions.length) {
@@ -137,6 +229,10 @@
         const handleDocumentClick = async (event) => {
             const target = event.target;
             if (!(target instanceof HTMLElement) || !(modalState.modal instanceof HTMLElement)) {
+                return;
+            }
+
+            if (isLoading) {
                 return;
             }
 
@@ -213,6 +309,7 @@
             handleDocumentClick,
             positionBelowField,
             setSuggestions,
+            showLoading,
         };
     };
 })();

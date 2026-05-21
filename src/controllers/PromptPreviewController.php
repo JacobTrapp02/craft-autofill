@@ -25,6 +25,10 @@ class PromptPreviewController extends Controller
         try {
             $body = Craft::$app->getRequest()->getBodyParams();
             $fieldId = (int)($body['fieldId'] ?? 0);
+            $entryIdRaw = $body['entryId'] ?? null;
+            $siteIdRaw = $body['siteId'] ?? null;
+            $entryId = is_numeric($entryIdRaw) && (int)$entryIdRaw > 0 ? (int)$entryIdRaw : null;
+            $siteId = is_numeric($siteIdRaw) && (int)$siteIdRaw > 0 ? (int)$siteIdRaw : null;
 
             if ($fieldId <= 0) {
                 return $this->asJson([
@@ -35,7 +39,9 @@ class PromptPreviewController extends Controller
 
             $prompt = AutofillPlugin::getInstance()->getAiService()->buildAutofillPromptPreview(
                 (string)($body['userPrompt'] ?? ''),
-                $fieldId
+                $fieldId,
+                $entryId,
+                $siteId,
             );
 
             return $this->asJson([
@@ -83,7 +89,7 @@ class PromptPreviewController extends Controller
             $modelConfig = $this->resolveModelConfigForField($field);
             $plugin = AutofillPlugin::getInstance();
             $aiService = $plugin->getAiService();
-            $instruction = $aiService->buildAutofillPromptPreview($userPrompt, $fieldId);
+            $instruction = $aiService->buildAutofillPromptPreview($userPrompt, $fieldId, $entryId, $siteId);
             $request = $aiService->promptBuilder->buildGenerationRequest(
                 '',
                 $instruction,

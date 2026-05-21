@@ -9,7 +9,14 @@
     <div class="fields">
         <div class="context-row-grid">
             <div class="field context-field-col">
-                <div class="heading"><label>Context Field</label></div>
+                <div class="heading">
+                    <label>
+                        Context Field
+                        {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                            tooltipText: 'A read-only field whose current value is included as context for AI. It is not directly updated by this context row.'
+                        } only %}
+                    </label>
+                </div>
                 <div class="input ltr">
                     <div class="select target-field-select-wrap">
                         <select class="js-global-context-select" name="contextRows[{{ contextRowId }}][fieldUid]">
@@ -27,7 +34,14 @@
             </div>
 
             <div class="field context-prompt-col">
-                <div class="heading"><label>Context Prompt (Optional)</label></div>
+                <div class="heading">
+                    <label>
+                        Context Prompt (Optional)
+                        {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                            tooltipText: 'Optional note explaining how AI should interpret this context field (for example, “use as source of truth”).'
+                        } only %}
+                    </label>
+                </div>
                 <div class="input ltr">
                     <textarea
                         class="text fullwidth"
@@ -43,12 +57,22 @@
             <summary class="autofill-advanced-summary"><span>Advanced Settings</span></summary>
             <div class="autofill-advanced-body">
                 <div class="field lights-row">
-                    <div class="heading"><label>Behavior</label></div>
+                    <div class="heading">
+                        <label>
+                            Behavior
+                            {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                                tooltipText: 'Context-row behavior controls whether this row participates in prompt building.'
+                            } only %}
+                        </label>
+                    </div>
                     <div class="input ltr autofill-row-toggles">
                         <label class="checkbox-label">
                             <input type="hidden" name="contextRows[{{ contextRowId }}][enabled]" value="0">
                             <input type="checkbox" name="contextRows[{{ contextRowId }}][enabled]" value="1"{% if contextRow.enabled ?? true %} checked{% endif %}>
                             Row Enabled
+                            {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                                tooltipText: 'Disable this to temporarily remove this context field from prompts without deleting the row.'
+                            } only %}
                         </label>
                     </div>
                 </div>

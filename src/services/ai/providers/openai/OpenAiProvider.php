@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace jtdev\craftautofill\services\ai\providers;
+namespace jtdev\craftautofill\services\ai\providers\openai;
 
 use Craft;
 use craft\base\Model;

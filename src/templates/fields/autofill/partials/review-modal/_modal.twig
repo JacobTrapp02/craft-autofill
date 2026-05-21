@@ -1,9 +1,15 @@
-<div class="autofill-review-modal-backdrop" data-autofill-review-backdrop hidden></div>
+{% set modalFieldAttr = modalFieldId is not empty ? (modalFieldId ~ '') : '' %}
 
-<div class="autofill-review-modal" data-autofill-review-modal hidden>
+<div class="autofill-review-modal-backdrop" data-autofill-review-backdrop{% if modalFieldAttr != '' %} data-autofill-field-id="{{ modalFieldAttr }}"{% endif %} hidden></div>
+
+<div class="autofill-review-modal" data-autofill-review-modal{% if modalFieldAttr != '' %} data-autofill-field-id="{{ modalFieldAttr }}"{% endif %} hidden>
     <div class="autofill-review-modal__header">
         <h2 class="autofill-review-modal__title">Suggestion Review</h2>
         <p class="autofill-review-modal__counter" data-autofill-review-status></p>
+    </div>
+    <div class="autofill-review-modal__loading" data-autofill-review-loading hidden>
+        <span class="autofill-review-modal__spinner" aria-hidden="true"></span>
+        <p class="autofill-review-modal__loading-text" data-autofill-review-loading-text>Waiting for response from AI...</p>
     </div>
     <div class="autofill-review-modal__body ltr">
         <div class="autofill-review-modal__field" data-autofill-review-field></div>

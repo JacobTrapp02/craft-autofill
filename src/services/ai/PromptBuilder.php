@@ -20,9 +20,14 @@ class PromptBuilder extends Component
         $this->fieldConfigBuilder ??= new AutofillFieldConfigBuilder();
     }
 
-    public function buildAutofillPromptPreview(string $userPrompt, int $fieldId): string
+    public function buildAutofillPromptPreview(
+        string $userPrompt,
+        int $fieldId,
+        ?int $entryId = null,
+        ?int $siteId = null,
+    ): string
     {
-        $config = $this->fieldConfigBuilder->buildFromFieldId($fieldId);
+        $config = $this->fieldConfigBuilder->buildFromFieldId($fieldId, $entryId, $siteId);
         $activeRows = [];
 
         foreach (($config['rows'] ?? []) as $row) {

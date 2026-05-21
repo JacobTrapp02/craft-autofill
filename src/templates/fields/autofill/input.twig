@@ -69,7 +69,9 @@
 
 </div>
 
-{% include 'autofill/fields/autofill/partials/_review-modal.twig' %}
+{% include 'autofill/fields/autofill/partials/_review-modal.twig' with {
+    modalFieldId: field.id ?? null,
+} only %}
 
 {% css %}
 .autofill-runtime {
@@ -144,6 +146,38 @@
     gap: 10px;
 }
 
+.autofill-review-modal__loading {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    padding: 20px 0 10px;
+}
+
+.autofill-review-modal__loading[hidden] {
+    display: none !important;
+}
+
+.autofill-review-modal__spinner {
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    border: 3px solid #d6deea;
+    border-top-color: #3b82f6;
+    animation: autofillSpin 0.85s linear infinite;
+}
+
+.autofill-review-modal__loading-text {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.35;
+    color: #4c5d70;
+}
+
+.autofill-review-modal.is-loading .autofill-review-modal__body,
+.autofill-review-modal.is-loading .autofill-review-modal__buttons {
+    display: none;
+}
+
 .autofill-review-modal__field {
     padding: 2px 0;
     font-size: 16px;
@@ -161,6 +195,39 @@
 
 .autofill-review-modal [data-autofill-review-editor] textarea {
     min-height: 88px;
+}
+
+.autofill-review-modal--richtext {
+    width: min(980px, calc(100vw - 32px));
+}
+
+.autofill-review-modal--richtext [data-autofill-review-editor] textarea {
+    min-height: 320px;
+}
+
+.autofill-review-richtext-editor {
+    min-height: 320px;
+    max-height: 56vh;
+    overflow: auto;
+    padding: 12px;
+    border: 1px solid #c8d2e0;
+    border-radius: 6px;
+    background: #fff;
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+.autofill-review-richtext-editor:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 1px;
+}
+
+.autofill-review-richtext-editor > :first-child {
+    margin-top: 0;
+}
+
+.autofill-review-richtext-editor > :last-child {
+    margin-bottom: 0;
 }
 
 .autofill-review-modal [data-autofill-review-editor] .autofill-review-editor-datetime {
@@ -190,6 +257,12 @@
     }
     100% {
         box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.95), 0 0 0 6px rgba(59, 130, 246, 0.20);
+    }
+}
+
+@keyframes autofillSpin {
+    to {
+        transform: rotate(360deg);
     }
 }
 {% endcss %}

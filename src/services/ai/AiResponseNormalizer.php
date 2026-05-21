@@ -103,6 +103,7 @@ class AiResponseNormalizer extends Component
             $match = $targetFieldMap[$this->normalizeName($fieldName)] ?? null;
             $targetFieldUid = (string)($match['targetFieldUid'] ?? '');
             $fieldContract = is_array($match['fieldContract'] ?? null) ? $match['fieldContract'] : [];
+            $adapterKey = (string)($match['adapterKey'] ?? '');
             $validationErrors = [];
 
             if (!$hasRawValue) {
@@ -117,7 +118,7 @@ class AiResponseNormalizer extends Component
                 $this->validateSuggestionValue($targetFieldUid, $rawValue, $value, $fieldContract)
             );
             [$displayValue, $displayValueIsLabel] = $this->resolveDisplayValue($value, $fieldContract);
-            $reviewEditor = $this->buildReviewEditorPayload($value, $fieldContract, $displayValue, $displayValueIsLabel);
+            $reviewEditor = $this->buildReviewEditorPayload($value, $fieldContract, $displayValue, $displayValueIsLabel, $adapterKey);
 
             $suggestions[] = [
                 'fieldName' => $fieldName,
@@ -254,6 +255,7 @@ class AiResponseNormalizer extends Component
                 'requiresApproval' => $row['requiresApproval'] ?? true,
                 'overrideCurrentValue' => $row['overrideCurrentValue'] ?? true,
                 'fieldContract' => $config['fieldContractsByUid'][$targetFieldUid] ?? [],
+                'adapterKey' => (string)($config['fieldAdapterKeyByUid'][$targetFieldUid] ?? ''),
             ];
         }
 
@@ -302,7 +304,8 @@ class AiResponseNormalizer extends Component
         mixed $normalizedValue,
         array $fieldContract,
         mixed $displayValue,
-        bool $displayValueIsLabel
+        bool $displayValueIsLabel,
+        string $adapterKey = '',
     ): array {
         $format = (string)($fieldContract['format'] ?? '');
         if ($format === 'date') {
@@ -340,6 +343,7 @@ class AiResponseNormalizer extends Component
         return [
             'type' => 'textarea',
             'source' => 'fallback:textarea',
+            'displayMode' => $adapterKey === 'ckeditor' ? 'richtext' : 'default',
         ];
     }
 

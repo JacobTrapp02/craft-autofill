@@ -11,7 +11,14 @@
     <div class="fields">
         <div class="target-prompt-row">
             <div class="field target-field-col">
-                <div class="heading"><label>Target Field</label></div>
+                <div class="heading">
+                    <label>
+                        Target Field
+                        {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                            tooltipText: 'Choose which entry field this row will update when suggestions are accepted.'
+                        } only %}
+                    </label>
+                </div>
                 <div class="input ltr">
                     <div class="select target-field-select-wrap">
                         <select class="js-target-field-select" name="rows[{{ rowId }}][targetFieldUid]">
@@ -29,7 +36,14 @@
             </div>
 
             <div class="field prompt-col">
-                <div class="heading"><label>Prompt</label></div>
+                <div class="heading">
+                    <label>
+                        Prompt
+                        {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                            tooltipText: 'This instruction is sent for this specific target field. Keep it direct and field-specific.'
+                        } only %}
+                    </label>
+                </div>
                 <div class="input ltr">
                     <textarea class="text fullwidth" rows="2" name="rows[{{ rowId }}][prompt]" placeholder="Describe how this field should be generated">{{ row.prompt ?? '' }}</textarea>
                 </div>
@@ -40,27 +54,46 @@
             <summary class="autofill-advanced-summary"><span>Advanced Settings</span></summary>
             <div class="autofill-advanced-body">
                 <div class="field lights-row">
-                    <div class="heading"><label>Behavior</label></div>
+                    <div class="heading">
+                        <label>
+                            Behavior
+                            {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                                tooltipText: 'These switches control review flow, whether current values are sent to the model, and whether this row is active.'
+                            } only %}
+                        </label>
+                    </div>
                     <div class="input ltr autofill-row-toggles">
                         <label class="checkbox-label">
                             <input type="hidden" name="rows[{{ rowId }}][requiresApproval]" value="0">
                             <input type="checkbox" name="rows[{{ rowId }}][requiresApproval]" value="1"{% if row.requiresApproval ?? true %} checked{% endif %}>
                             Requires Editor Approval
+                            {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                                tooltipText: 'When enabled, this suggestion is shown in the review modal before it can be applied.'
+                            } only %}
                         </label>
                         <label class="checkbox-label">
                             <input type="hidden" name="rows[{{ rowId }}][includeCurrentFieldValue]" value="0">
                             <input type="checkbox" name="rows[{{ rowId }}][includeCurrentFieldValue]" value="1"{% if row.includeCurrentFieldValue ?? true %} checked{% endif %}>
                             Include Current Field Value In Prompt
+                            {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                                tooltipText: 'Sends the field’s current value as context so AI can refine or preserve what is already there.'
+                            } only %}
                         </label>
                         <label class="checkbox-label">
                             <input type="hidden" name="rows[{{ rowId }}][overrideCurrentValue]" value="0">
                             <input type="checkbox" name="rows[{{ rowId }}][overrideCurrentValue]" value="1"{% if row.overrideCurrentValue ?? true %} checked{% endif %}>
                             Override Current Value
+                            {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                                tooltipText: 'If disabled and the field already has content, this row is skipped to avoid replacing existing values.'
+                            } only %}
                         </label>
                         <label class="checkbox-label">
                             <input type="hidden" name="rows[{{ rowId }}][enabled]" value="0">
                             <input type="checkbox" name="rows[{{ rowId }}][enabled]" value="1"{% if row.enabled ?? true %} checked{% endif %}>
                             Row Enabled
+                            {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                                tooltipText: 'Quickly disable a row without deleting its prompt and target field setup.'
+                            } only %}
                         </label>
                     </div>
                 </div>

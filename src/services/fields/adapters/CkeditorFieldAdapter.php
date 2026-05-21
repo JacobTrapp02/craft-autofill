@@ -71,15 +71,7 @@ class CkeditorFieldAdapter implements FieldAdapterInterface
 
     public function getContextValue(FieldInterface $field, mixed $value, array $options = []): string
     {
-        if (is_string($value)) {
-            return trim($value);
-        }
-
-        if (is_scalar($value)) {
-            return trim((string)$value);
-        }
-
-        return '';
+        return $this->extractContextText($value);
     }
 
     public function validateSuggestion(FieldInterface $field, mixed $value): bool
@@ -110,5 +102,76 @@ class CkeditorFieldAdapter implements FieldAdapterInterface
 
         $entry->setFieldValue($handle, $normalized);
         return $normalized;
+    }
+
+    private function extractContextText(mixed $value, int $depth = 0): string
+    {
+        if ($depth > 3 || $value === null) {
+            return '';
+        }
+
+        if (is_string($value)) {
+            return trim($value);
+        }
+
+        if (is_scalar($value)) {
+            return trim((string)$value);
+        }
+
+        if (is_array($value)) {
+            $parts = [];
+            foreach ($value as $part) {
+                $text = $this->extractContextText($part, $depth + 1);
+                if ($text !== '') {
+                    $parts[] = $text;
+                }
+            }
+
+            return trim(implode("\n\n", $parts));
+        }
+
+        if ($value instanceof \JsonSerializable) {
+            try {
+                return $this->extractContextText($value->jsonSerialize(), $depth + 1);
+            } catch (\Throwable) {
+                // Fall through to other extraction strategies.
+            }
+        }
+
+        if (is_object($value)) {
+            foreach (['getParsedContent', 'getRawContent', 'getText', 'getValue', 'toHtml', '__toString'] as $method) {
+                if (!method_exists($value, $method)) {
+                    continue;
+                }
+
+                try {
+                    $candidate = $value->{$method}();
+                } catch (\Throwable) {
+                    continue;
+                }
+
+                $text = $this->extractContextText($candidate, $depth + 1);
+                if ($text !== '') {
+                    return $text;
+                }
+            }
+
+            foreach (['content', 'value', 'html', 'body', 'text'] as $property) {
+                if (!isset($value->{$property})) {
+                    continue;
+                }
+
+                $text = $this->extractContextText($value->{$property}, $depth + 1);
+                if ($text !== '') {
+                    return $text;
+                }
+            }
+
+            if ($value instanceof \Stringable) {
+                return trim((string)$value);
+            }
+        }
+
+        return '';
     }
 }

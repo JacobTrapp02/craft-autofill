@@ -40,6 +40,7 @@
     const reviewModal = runtime.createReviewModal({
         applySuggestion: applySuggestionServer,
         focusMatchedField: runtime.focusMatchedField,
+        fieldId: Number(config.fieldId || 0),
     });
     runtime.positionActiveReviewModal = reviewModal.positionBelowField;
     const currentUserPrompt = () => (
@@ -72,6 +73,8 @@
                     endpoint: promptPreviewActionUrl,
                     fieldId,
                     userPrompt: currentUserPrompt(),
+                    entryId: Number(config.entryId || 0),
+                    siteId: Number(config.siteId || 0) || null,
                 });
                 return;
             }
@@ -82,6 +85,8 @@
                 return;
             }
 
+            reviewModal.showLoading('Waiting for response from AI...');
+            reviewModal.positionBelowField(generateButton);
             const suggestions = await runtime.generateSuggestions({
                 endpoint: generateSuggestionsActionUrl,
                 fieldId,

@@ -105,6 +105,66 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    position: relative;
+}
+
+.autofill-help-tip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    margin-left: 6px;
+    vertical-align: middle;
+    cursor: help;
+    outline: none;
+}
+
+.autofill-help-tip__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    border: 1px solid var(--gray-400);
+    color: var(--gray-700);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    background: #fff;
+}
+
+.autofill-help-tip__bubble {
+    position: absolute;
+    z-index: 20;
+    left: 50%;
+    top: calc(100% + 8px);
+    transform: translateX(-50%);
+    width: min(320px, 70vw);
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--gray-300);
+    background: #fff;
+    color: var(--gray-900);
+    box-shadow: 0 8px 24px rgba(17, 24, 39, 0.14);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.35;
+    white-space: normal;
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity 120ms ease, visibility 120ms ease;
+}
+
+.autofill-help-tip:hover .autofill-help-tip__bubble,
+.autofill-help-tip:focus .autofill-help-tip__bubble,
+.autofill-help-tip:focus-within .autofill-help-tip__bubble {
+    opacity: 1;
+    visibility: visible;
 }
 
 [data-autofill-row-builder] .autofill-advanced,

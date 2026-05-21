@@ -36,7 +36,7 @@
 
 {{ forms.selectField({
     label: 'Entry Type Scope',
-    instructions: 'Choose the entry type this Autofill profile config applies to.',
+    tip: 'This scope controls which fields appear in row dropdowns and where this Autofill profile should be reused.',
     id: 'entryTypeUid',
     name: 'entryTypeUid',
     options: entryTypeOptions,
@@ -46,7 +46,7 @@
 
 {{ forms.selectField({
     label: 'Model Config',
-    instructions: 'Choose an override model config for this field, or use global default behavior.',
+    tip: 'If empty, the first enabled model config in plugin settings is used. Set this when this field needs a specific model.',
     id: 'modelConfigUid',
     name: 'modelConfigUid',
     options: modelConfigOptions,
@@ -56,7 +56,7 @@
 
 {{ forms.lightswitchField({
     label: 'Show Prompt Input Box',
-    instructions: 'When enabled, editors can provide extra prompt/context before running Autofill.',
+    tip: 'Turn this off to simplify the editor experience when prompts should be fully controlled by field config only.',
     id: 'showUserPromptInput',
     name: 'showUserPromptInput',
     on: field.showUserPromptInput ?? true,
@@ -65,7 +65,7 @@
 
 {{ forms.textField({
     label: 'Action Button Label',
-    instructions: 'Optional override for the primary action button text shown in the entry editor.',
+    tip: 'Leave blank to use the default label (`Generate` in Test Mode, `Autofill` in Live Mode).',
     id: 'actionButtonLabel',
     name: 'actionButtonLabel',
     value: field.actionButtonLabel,
