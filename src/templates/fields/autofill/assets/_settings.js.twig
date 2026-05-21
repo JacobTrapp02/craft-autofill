@@ -51,6 +51,25 @@
         refreshFieldMeta(row, 'select.js-target-field-select', '[data-target-meta]', 'Field Type: ');
     };
 
+    const refreshSeomaticConfig = (row) => {
+        if (!row) {
+            return;
+        }
+
+        const select = row.querySelector('select.js-target-field-select');
+        const config = row.querySelector('[data-seomatic-config]');
+        if (!(select instanceof HTMLSelectElement) || !(config instanceof HTMLElement)) {
+            return;
+        }
+
+        const selectedOption = select.selectedOptions && select.selectedOptions.length > 0
+            ? select.selectedOptions[0]
+            : null;
+        const selectedFieldType = fieldTypeByUid[select.value] || selectedOption?.dataset?.fieldType || '';
+        const isSeomatic = String(selectedFieldType).trim().toLowerCase() === 'seomatic';
+        config.hidden = !isSeomatic;
+    };
+
     const refreshContextMeta = (row) => {
         refreshFieldMeta(row, 'select.js-global-context-select', '[data-context-meta]', 'Field Type: ');
     };
@@ -84,12 +103,15 @@
             placeholder: 'Select a target field',
             onInitialize() {
                 refreshTargetMeta(row);
+                refreshSeomaticConfig(row);
             },
             onChange() {
                 refreshTargetMeta(row);
+                refreshSeomaticConfig(row);
             },
         });
         refreshTargetMeta(row);
+        refreshSeomaticConfig(row);
     };
 
     const initContextSelectize = (row) => {

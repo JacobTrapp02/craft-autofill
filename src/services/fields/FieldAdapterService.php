@@ -15,6 +15,7 @@ use jtdev\craftautofill\services\fields\adapters\FieldAdapterInterface;
 use jtdev\craftautofill\services\fields\adapters\LightswitchFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\NumberFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\PlainTextFieldAdapter;
+use jtdev\craftautofill\services\fields\adapters\SeomaticFieldAdapter;
 
 class FieldAdapterService extends Component
 {
@@ -35,6 +36,7 @@ class FieldAdapterService extends Component
             $this->registerAdapter(new DropdownFieldAdapter());
             $this->registerAdapter(new ButtonGroupFieldAdapter());
             $this->registerAdapter(new EmailFieldAdapter());
+            $this->registerAdapter(new SeomaticFieldAdapter());
             $this->registerAdapter(new CkeditorFieldAdapter());
         }
     }

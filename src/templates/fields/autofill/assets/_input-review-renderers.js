@@ -282,6 +282,154 @@
         },
     });
 
+    const normalizeSeomaticSuggestion = (value) => {
+        let input = value;
+        if (typeof input === 'string') {
+            try {
+                input = JSON.parse(input);
+            } catch (_error) {
+                input = {};
+            }
+        }
+
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+            return {};
+        }
+
+        const scoped = input.metaGlobalVars && typeof input.metaGlobalVars === 'object'
+            ? { ...input, ...input.metaGlobalVars }
+            : input;
+
+        const toTrimmed = (key) => asString(scoped[key] ?? '').trim();
+        const siteNamePosition = toTrimmed('siteNamePosition').toLowerCase();
+
+        return {
+            seoTitle: toTrimmed('seoTitle'),
+            seoTitleSource: toTrimmed('seoTitleSource'),
+            siteNamePosition: ['before', 'after', 'none'].includes(siteNamePosition) ? siteNamePosition : '',
+            siteNamePositionSource: toTrimmed('siteNamePositionSource'),
+            seoDescription: toTrimmed('seoDescription'),
+            seoDescriptionSource: toTrimmed('seoDescriptionSource'),
+            seoKeywords: toTrimmed('seoKeywords'),
+            seoKeywordsSource: toTrimmed('seoKeywordsSource'),
+        };
+    };
+
+    const createLabeledInput = ({ labelText, type = 'text', fieldKey, value = '' }) => {
+        const label = document.createElement('label');
+        label.className = 'autofill-review-editor-seomatic__field';
+
+        const title = document.createElement('span');
+        title.className = 'autofill-review-editor-seomatic__label';
+        title.textContent = labelText;
+        label.appendChild(title);
+
+        const input = document.createElement('input');
+        input.className = 'text fullwidth';
+        input.type = type;
+        input.value = value;
+        input.dataset.autofillReviewInput = `seomatic-${fieldKey}`;
+        label.appendChild(input);
+
+        return label;
+    };
+
+    const createLabeledSelect = ({ labelText, fieldKey, value = '', options = [] }) => {
+        const label = document.createElement('label');
+        label.className = 'autofill-review-editor-seomatic__field';
+
+        const title = document.createElement('span');
+        title.className = 'autofill-review-editor-seomatic__label';
+        title.textContent = labelText;
+        label.appendChild(title);
+
+        const select = document.createElement('select');
+        select.className = 'text fullwidth';
+        select.dataset.autofillReviewInput = `seomatic-${fieldKey}`;
+
+        const empty = document.createElement('option');
+        empty.value = '';
+        empty.textContent = 'Select position';
+        select.appendChild(empty);
+
+        for (const optionValue of options) {
+            const option = document.createElement('option');
+            option.value = optionValue;
+            option.textContent = optionValue;
+            select.appendChild(option);
+        }
+
+        select.value = value;
+        label.appendChild(select);
+
+        return label;
+    };
+
+    const createSeomaticBasicRenderer = () => ({
+        render({ suggestion, container }) {
+            const usedTemplate = mountTemplate('seomaticBasic', container);
+            const wrapper = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="seomatic-basic"]')
+                : null;
+            const host = wrapper instanceof HTMLElement ? wrapper : container;
+
+            const normalized = normalizeSeomaticSuggestion(suggestion?.value ?? {});
+            const setValue = (key, value) => {
+                const element = host.querySelector(`[data-autofill-review-input="seomatic-${key}"]`);
+                if (element instanceof HTMLInputElement || element instanceof HTMLSelectElement) {
+                    element.value = value;
+                }
+            };
+
+            setValue('seoTitle', normalized.seoTitle);
+            setValue('siteNamePosition', normalized.siteNamePosition);
+            setValue('seoDescription', normalized.seoDescription);
+            setValue('seoKeywords', normalized.seoKeywords);
+        },
+        readValue({ suggestion, container }) {
+            const wrapper = container.querySelector('[data-autofill-review-input="seomatic-basic"]');
+            const host = wrapper instanceof HTMLElement ? wrapper : container;
+            const current = normalizeSeomaticSuggestion(suggestion?.value ?? {});
+
+            const read = (fieldKey) => {
+                const element = host.querySelector(`[data-autofill-review-input="seomatic-${fieldKey}"]`);
+                if (element instanceof HTMLInputElement || element instanceof HTMLSelectElement) {
+                    return element.value.trim();
+                }
+                return '';
+            };
+
+            const next = {
+                seoTitle: read('seoTitle') || current.seoTitle || '',
+                siteNamePosition: read('siteNamePosition') || current.siteNamePosition || '',
+                seoDescription: read('seoDescription') || current.seoDescription || '',
+                seoKeywords: read('seoKeywords') || current.seoKeywords || '',
+            };
+
+            if (next.seoTitle !== '') {
+                next.seoTitleSource = 'custom';
+            }
+            if (next.siteNamePosition !== '') {
+                next.siteNamePositionSource = 'custom';
+            }
+            if (next.seoDescription !== '') {
+                next.seoDescriptionSource = 'custom';
+            }
+            if (next.seoKeywords !== '') {
+                next.seoKeywordsSource = 'custom';
+            }
+
+            const cleaned = {};
+            Object.keys(next).forEach((key) => {
+                if (next[key] !== '') {
+                    cleaned[key] = next[key];
+                }
+            });
+
+            return cleaned;
+        },
+    });
+
     const createDateRenderer = () => ({
         render({ suggestion, container }) {
             const usedTemplate = mountTemplate('date', container);
@@ -427,6 +575,7 @@
         textarea: createTextareaRenderer(),
         dropdown: createDropdownRenderer(),
         buttonGroup: createButtonGroupRenderer(),
+        seomaticBasic: createSeomaticBasicRenderer(),
         date: createDateRenderer(),
         datetime: createDateTimeRenderer(),
         lightswitch: createLightswitchRenderer(),

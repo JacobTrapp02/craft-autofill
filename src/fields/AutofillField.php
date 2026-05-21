@@ -240,6 +240,7 @@ class AutofillField extends Field
             $includeCurrentFieldValue = $this->toBool($row['includeCurrentFieldValue'] ?? true);
             $overrideCurrentValue = $this->toBool($row['overrideCurrentValue'] ?? true);
             $enabled = $this->toBool($row['enabled'] ?? true);
+            $seomatic = $this->normalizeSeomaticRowConfig($row['seomatic'] ?? null);
 
             $hasMeaningfulInput = $targetFieldUid !== '' || $prompt !== '';
             if (!$hasMeaningfulInput) {
@@ -253,6 +254,7 @@ class AutofillField extends Field
                 'includeCurrentFieldValue' => $includeCurrentFieldValue,
                 'overrideCurrentValue' => $overrideCurrentValue,
                 'enabled' => $enabled,
+                'seomatic' => $seomatic,
             ];
         }
 
@@ -373,6 +375,22 @@ class AutofillField extends Field
         }
 
         return false;
+    }
+
+    /**
+     * @param mixed $raw
+     * @return array{includeSeoTitle:bool,includeSiteNamePosition:bool,includeSeoDescription:bool,includeSeoKeywords:bool}
+     */
+    private function normalizeSeomaticRowConfig(mixed $raw): array
+    {
+        $config = is_array($raw) ? $raw : [];
+
+        return [
+            'includeSeoTitle' => $this->toBool($config['includeSeoTitle'] ?? true),
+            'includeSiteNamePosition' => $this->toBool($config['includeSiteNamePosition'] ?? true),
+            'includeSeoDescription' => $this->toBool($config['includeSeoDescription'] ?? true),
+            'includeSeoKeywords' => $this->toBool($config['includeSeoKeywords'] ?? true),
+        ];
     }
 
     /**

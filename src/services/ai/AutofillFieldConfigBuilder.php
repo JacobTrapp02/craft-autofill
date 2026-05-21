@@ -42,6 +42,19 @@ class AutofillFieldConfigBuilder extends Component
 
         $entry = $this->resolveEntry($entryId, $siteId);
         $adapterService = AutofillPlugin::getInstance()->getFieldAdapterService();
+        $rowPromptConfigByUid = [];
+        foreach ($field->rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $targetUid = trim((string)($row['targetFieldUid'] ?? ''));
+            if ($targetUid === '') {
+                continue;
+            }
+
+            $rowPromptConfigByUid[$targetUid] = $row;
+        }
 
         if ($field->entryTypeUid !== '') {
             $entryType = Craft::$app->getEntries()->getEntryTypeByUid($field->entryTypeUid);
@@ -57,7 +70,7 @@ class AutofillFieldConfigBuilder extends Component
                     continue;
                 }
 
-                $fieldContractsByUid[$uid] = $adapter->buildPromptContract($layoutField);
+                $fieldContractsByUid[$uid] = $adapter->buildPromptContract($layoutField, $rowPromptConfigByUid[$uid] ?? []);
                 $fieldNameByUid[$uid] = (string)($layoutField->name ?? $uid);
                 $fieldHandleByUid[$uid] = (string)($layoutField->handle ?? '');
                 $fieldAdapterKeyByUid[$uid] = $adapter->getKey();

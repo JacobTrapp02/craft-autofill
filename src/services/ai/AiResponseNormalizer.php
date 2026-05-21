@@ -340,6 +340,13 @@ class AiResponseNormalizer extends Component
             ];
         }
 
+        if ($adapterKey === 'seomatic') {
+            return [
+                'type' => 'seomaticBasic',
+                'source' => 'adapter:seomatic',
+            ];
+        }
+
         return [
             'type' => 'textarea',
             'source' => 'fallback:textarea',

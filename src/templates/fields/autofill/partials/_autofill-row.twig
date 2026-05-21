@@ -97,6 +97,39 @@
                         </label>
                     </div>
                 </div>
+
+                <div class="field lights-row autofill-seomatic-config" data-seomatic-config hidden>
+                    <div class="heading">
+                        <label>
+                            SEO Prompt Includes
+                            {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                                tooltipText: 'Control which SEO properties are included in the AI contract for SEOmatic target fields.'
+                            } only %}
+                        </label>
+                    </div>
+                    <div class="input ltr autofill-row-toggles">
+                        <label class="checkbox-label" data-seomatic-option="seoTitle">
+                            <input type="hidden" name="rows[{{ rowId }}][seomatic][includeSeoTitle]" value="0">
+                            <input type="checkbox" name="rows[{{ rowId }}][seomatic][includeSeoTitle]" value="1"{% if row.seomatic.includeSeoTitle ?? true %} checked{% endif %}>
+                            Include SEO Title + Source
+                        </label>
+                        <label class="checkbox-label" data-seomatic-option="siteNamePosition">
+                            <input type="hidden" name="rows[{{ rowId }}][seomatic][includeSiteNamePosition]" value="0">
+                            <input type="checkbox" name="rows[{{ rowId }}][seomatic][includeSiteNamePosition]" value="1"{% if row.seomatic.includeSiteNamePosition ?? true %} checked{% endif %}>
+                            Include Site Name Position + Source
+                        </label>
+                        <label class="checkbox-label" data-seomatic-option="seoDescription">
+                            <input type="hidden" name="rows[{{ rowId }}][seomatic][includeSeoDescription]" value="0">
+                            <input type="checkbox" name="rows[{{ rowId }}][seomatic][includeSeoDescription]" value="1"{% if row.seomatic.includeSeoDescription ?? true %} checked{% endif %}>
+                            Include SEO Description + Source
+                        </label>
+                        <label class="checkbox-label" data-seomatic-option="seoKeywords">
+                            <input type="hidden" name="rows[{{ rowId }}][seomatic][includeSeoKeywords]" value="0">
+                            <input type="checkbox" name="rows[{{ rowId }}][seomatic][includeSeoKeywords]" value="1"{% if row.seomatic.includeSeoKeywords ?? true %} checked{% endif %}>
+                            Include SEO Keywords + Source
+                        </label>
+                    </div>
+                </div>
             </div>
         </details>
     </div>
