@@ -6,6 +6,7 @@ namespace jtdev\craftautofill\services\fields;
 
 use craft\base\Component;
 use craft\base\FieldInterface;
+use jtdev\craftautofill\services\fields\adapters\AddressesFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\ButtonGroupFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\CkeditorFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\DateFieldAdapter;
@@ -36,6 +37,7 @@ class FieldAdapterService extends Component
             $this->registerAdapter(new DropdownFieldAdapter());
             $this->registerAdapter(new ButtonGroupFieldAdapter());
             $this->registerAdapter(new EmailFieldAdapter());
+            $this->registerAdapter(new AddressesFieldAdapter());
             $this->registerAdapter(new SeomaticFieldAdapter());
             $this->registerAdapter(new CkeditorFieldAdapter());
         }

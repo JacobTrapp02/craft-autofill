@@ -347,6 +347,13 @@ class AiResponseNormalizer extends Component
             ];
         }
 
+        if ($adapterKey === 'addresses') {
+            return [
+                'type' => 'addresses',
+                'source' => 'adapter:addresses',
+            ];
+        }
+
         return [
             'type' => 'textarea',
             'source' => 'fallback:textarea',
