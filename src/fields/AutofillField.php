@@ -135,7 +135,7 @@ class AutofillField extends Field
 
         foreach ($this->contextRows as $index => $row) {
             $rowNumber = $index + 1;
-            if (($row['fieldUid'] ?? '') === '') {
+            if ($row['fieldUid'] === '') {
                 $this->addError('contextRows', sprintf('Context row %d must select a field.', $rowNumber));
             }
         }
@@ -167,7 +167,7 @@ class AutofillField extends Field
         }
 
         foreach ($this->contextRows as $index => $row) {
-            $uid = (string)($row['fieldUid'] ?? '');
+            $uid = $row['fieldUid'];
             if ($uid === '') {
                 continue;
             }
@@ -241,6 +241,7 @@ class AutofillField extends Field
             $overrideCurrentValue = $this->toBool($row['overrideCurrentValue'] ?? true);
             $enabled = $this->toBool($row['enabled'] ?? true);
             $seomatic = $this->normalizeSeomaticRowConfig($row['seomatic'] ?? null);
+            $related = $this->normalizeRelatedRowConfig($row['related'] ?? null);
 
             $hasMeaningfulInput = $targetFieldUid !== '' || $prompt !== '';
             if (!$hasMeaningfulInput) {
@@ -255,6 +256,7 @@ class AutofillField extends Field
                 'overrideCurrentValue' => $overrideCurrentValue,
                 'enabled' => $enabled,
                 'seomatic' => $seomatic,
+                'related' => $related,
             ];
         }
 
@@ -390,6 +392,29 @@ class AutofillField extends Field
             'includeSiteNamePosition' => $this->toBool($config['includeSiteNamePosition'] ?? true),
             'includeSeoDescription' => $this->toBool($config['includeSeoDescription'] ?? true),
             'includeSeoKeywords' => $this->toBool($config['includeSeoKeywords'] ?? true),
+        ];
+    }
+
+    /**
+     * @param mixed $raw
+     * @return array{mode:string,topN:int}
+     */
+    private function normalizeRelatedRowConfig(mixed $raw): array
+    {
+        $config = is_array($raw) ? $raw : [];
+        $mode = strtolower(trim((string)($config['mode'] ?? 'topN')));
+        if (!in_array($mode, ['all', 'topn'], true)) {
+            $mode = 'topN';
+        } elseif ($mode === 'topn') {
+            $mode = 'topN';
+        }
+
+        $topN = (int)($config['topN'] ?? 25);
+        $topN = max(1, min(500, $topN));
+
+        return [
+            'mode' => $mode,
+            'topN' => $topN,
         ];
     }
 

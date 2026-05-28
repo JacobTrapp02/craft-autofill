@@ -130,6 +130,48 @@
                         </label>
                     </div>
                 </div>
+
+                <div class="field lights-row autofill-related-config" data-related-config hidden>
+                    <div class="heading">
+                        <label>
+                            Related Selection Scope
+                            {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                                tooltipText: 'Choose whether AI sees all candidates or only a Top N shortlist. Top N keeps prompts smaller and faster.'
+                            } only %}
+                        </label>
+                    </div>
+                    <div class="input ltr">
+                        <div style="display:grid;grid-template-columns:minmax(160px,240px) minmax(140px,180px);gap:10px;align-items:end;">
+                            <label class="field">
+                                <div class="heading"><label>Mode</label></div>
+                                <div class="input">
+                                    <div class="select">
+                                        <select name="rows[{{ rowId }}][related][mode]" data-related-mode>
+                                            {% set relatedMode = row.related.mode ?? 'topN' %}
+                                            <option value="topN"{% if relatedMode == 'topN' %} selected{% endif %}>Top N</option>
+                                            <option value="all"{% if relatedMode == 'all' %} selected{% endif %}>All</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="field" data-related-topn-wrap>
+                                <div class="heading"><label>Top N</label></div>
+                                <div class="input">
+                                    <input
+                                        class="text fullwidth"
+                                        type="number"
+                                        min="1"
+                                        max="500"
+                                        step="1"
+                                        name="rows[{{ rowId }}][related][topN]"
+                                        value="{{ row.related.topN ?? 25 }}"
+                                        data-related-topn
+                                    >
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
             </div>
         </details>
     </div>

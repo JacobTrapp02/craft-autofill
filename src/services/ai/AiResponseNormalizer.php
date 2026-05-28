@@ -354,6 +354,13 @@ class AiResponseNormalizer extends Component
             ];
         }
 
+        if (in_array($adapterKey, ['categories', 'tags', 'entries'], true)) {
+            return [
+                'type' => 'relatedTitles',
+                'source' => 'adapter:related',
+            ];
+        }
+
         return [
             'type' => 'textarea',
             'source' => 'fallback:textarea',

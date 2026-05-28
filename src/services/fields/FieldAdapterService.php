@@ -8,15 +8,18 @@ use craft\base\Component;
 use craft\base\FieldInterface;
 use jtdev\craftautofill\services\fields\adapters\AddressesFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\ButtonGroupFieldAdapter;
+use jtdev\craftautofill\services\fields\adapters\CategoriesFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\CkeditorFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\DateFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\DropdownFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\EmailFieldAdapter;
+use jtdev\craftautofill\services\fields\adapters\EntriesFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\FieldAdapterInterface;
 use jtdev\craftautofill\services\fields\adapters\LightswitchFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\NumberFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\PlainTextFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\SeomaticFieldAdapter;
+use jtdev\craftautofill\services\fields\adapters\TagsFieldAdapter;
 
 class FieldAdapterService extends Component
 {
@@ -38,6 +41,9 @@ class FieldAdapterService extends Component
             $this->registerAdapter(new ButtonGroupFieldAdapter());
             $this->registerAdapter(new EmailFieldAdapter());
             $this->registerAdapter(new AddressesFieldAdapter());
+            $this->registerAdapter(new CategoriesFieldAdapter());
+            $this->registerAdapter(new TagsFieldAdapter());
+            $this->registerAdapter(new EntriesFieldAdapter());
             $this->registerAdapter(new SeomaticFieldAdapter());
             $this->registerAdapter(new CkeditorFieldAdapter());
         }

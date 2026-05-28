@@ -270,6 +270,40 @@
 }
 {% include 'autofill/fields/autofill/assets/_input-review-addresses.css.twig' %}
 
+.autofill-review-modal [data-autofill-review-editor] .autofill-review-editor-related__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.autofill-review-modal [data-autofill-review-editor] .autofill-related-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border: 1px solid #c8d2e0;
+    border-radius: 999px;
+    background: #f8fafc;
+    max-width: 100%;
+}
+
+.autofill-review-modal [data-autofill-review-editor] .autofill-related-chip__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: min(420px, 62vw);
+}
+
+.autofill-review-modal [data-autofill-review-editor] .autofill-related-chip__remove {
+    border: 0;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+}
+
 .autofill-review-modal__buttons {
     margin-top: 14px;
     display: flex;

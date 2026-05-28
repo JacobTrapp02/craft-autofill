@@ -70,6 +70,49 @@
         config.hidden = !isSeomatic;
     };
 
+    const isRelatedFieldType = (fieldType) => {
+        const normalized = String(fieldType || '').trim().toLowerCase();
+        return ['categories', 'tags', 'entries'].includes(normalized);
+    };
+
+    const refreshRelatedConfig = (row) => {
+        if (!row) {
+            return;
+        }
+
+        const select = row.querySelector('select.js-target-field-select');
+        const config = row.querySelector('[data-related-config]');
+        if (!(select instanceof HTMLSelectElement) || !(config instanceof HTMLElement)) {
+            return;
+        }
+
+        const selectedOption = select.selectedOptions && select.selectedOptions.length > 0
+            ? select.selectedOptions[0]
+            : null;
+        const selectedFieldType = fieldTypeByUid[select.value] || selectedOption?.dataset?.fieldType || '';
+        const enabled = isRelatedFieldType(selectedFieldType);
+        config.hidden = !enabled;
+
+        if (!enabled) {
+            return;
+        }
+
+        const modeSelect = row.querySelector('[data-related-mode]');
+        const topNWrap = row.querySelector('[data-related-topn-wrap]');
+        const topNInput = row.querySelector('[data-related-topn]');
+        if (!(modeSelect instanceof HTMLSelectElement) || !(topNWrap instanceof HTMLElement)) {
+            return;
+        }
+
+        const mode = String(modeSelect.value || 'topN');
+        const showTopN = mode !== 'all';
+        topNWrap.hidden = !showTopN;
+
+        if (topNInput instanceof HTMLInputElement) {
+            topNInput.disabled = !showTopN;
+        }
+    };
+
     const refreshContextMeta = (row) => {
         refreshFieldMeta(row, 'select.js-global-context-select', '[data-context-meta]', 'Field Type: ');
     };
@@ -104,14 +147,25 @@
             onInitialize() {
                 refreshTargetMeta(row);
                 refreshSeomaticConfig(row);
+                refreshRelatedConfig(row);
             },
             onChange() {
                 refreshTargetMeta(row);
                 refreshSeomaticConfig(row);
+                refreshRelatedConfig(row);
             },
         });
         refreshTargetMeta(row);
         refreshSeomaticConfig(row);
+        refreshRelatedConfig(row);
+
+        const modeSelect = row.querySelector('[data-related-mode]');
+        if (modeSelect instanceof HTMLSelectElement && !modeSelect.dataset.boundRelatedMode) {
+            modeSelect.addEventListener('change', () => {
+                refreshRelatedConfig(row);
+            });
+            modeSelect.dataset.boundRelatedMode = '1';
+        }
     };
 
     const initContextSelectize = (row) => {

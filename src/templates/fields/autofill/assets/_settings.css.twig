@@ -60,6 +60,7 @@
 [data-autofill-row-builder] .target-prompt-row > .field,
 [data-autofill-context-builder] .context-row-grid > .field {
     margin-top: 0;
+    min-width: 0;
 }
 
 [data-autofill-row-builder] .target-prompt-row .heading,
@@ -213,4 +214,19 @@
 [data-autofill-row-builder] .selectize-control,
 [data-autofill-context-builder] .selectize-control {
     width: 100%;
+}
+
+[data-autofill-row-builder] .target-field-col .selectize-input,
+[data-autofill-context-builder] .context-row-grid .selectize-input {
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+[data-autofill-row-builder] .target-field-col .selectize-input .item,
+[data-autofill-context-builder] .context-row-grid .selectize-input .item {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
