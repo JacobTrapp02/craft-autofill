@@ -12,6 +12,7 @@ use jtdev\craftautofill\services\fields\adapters\CategoriesFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\CheckboxesFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\CkeditorFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\ColorFieldAdapter;
+use jtdev\craftautofill\services\fields\adapters\CountryFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\DateFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\DropdownFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\EmailFieldAdapter;
@@ -46,6 +47,7 @@ class FieldAdapterService extends Component
             $this->registerAdapter(new MultiSelectFieldAdapter());
             $this->registerAdapter(new RadioButtonsFieldAdapter());
             $this->registerAdapter(new ColorFieldAdapter());
+            $this->registerAdapter(new CountryFieldAdapter());
             $this->registerAdapter(new ButtonGroupFieldAdapter());
             $this->registerAdapter(new EmailFieldAdapter());
             $this->registerAdapter(new AddressesFieldAdapter());
