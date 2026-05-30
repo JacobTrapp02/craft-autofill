@@ -383,6 +383,10 @@ class AiResponseNormalizer extends Component
             ];
         }
 
+        if ($adapterKey === 'link') {
+            return $this->buildLinkReviewEditorPayload($normalizedValue, $fieldContract);
+        }
+
         if ($adapterKey === 'range') {
             return [
                 'type' => 'range',
@@ -684,6 +688,50 @@ class AiResponseNormalizer extends Component
 
         [$hour, $minute, $second] = array_pad(array_map('intval', explode(':', $raw)), 3, 0);
         return $hour >= 0 && $hour <= 23 && $minute >= 0 && $minute <= 59 && $second >= 0 && $second <= 59;
+    }
+
+    /**
+     * @param array<string,mixed> $fieldContract
+     * @return array<string,mixed>
+     */
+    private function buildLinkReviewEditorPayload(mixed $normalizedValue, array $fieldContract): array
+    {
+        $value = is_array($normalizedValue) ? $normalizedValue : [];
+        $typeId = trim((string)($value['type'] ?? ''));
+        $typeLabels = is_array($fieldContract['typeLabels'] ?? null) ? $fieldContract['typeLabels'] : [];
+        $typeLabel = trim((string)($typeLabels[$typeId] ?? $typeId));
+        $destination = trim((string)($value['value'] ?? ''));
+        $context = '';
+
+        $candidateListKey = $typeId !== '' ? sprintf('%sCandidates', $typeId) : '';
+        $candidateList = $candidateListKey !== '' && is_array($fieldContract[$candidateListKey] ?? null)
+            ? $fieldContract[$candidateListKey]
+            : [];
+
+        foreach ($candidateList as $candidate) {
+            if (!is_array($candidate)) {
+                continue;
+            }
+
+            if (trim((string)($candidate['candidateKey'] ?? '')) !== $destination) {
+                continue;
+            }
+
+            $destination = trim((string)($candidate['title'] ?? $destination));
+            $context = trim((string)($candidate['context'] ?? ''));
+            break;
+        }
+
+        return [
+            'type' => 'linkPreview',
+            'source' => 'adapter:link',
+            'typeLabel' => $typeLabel,
+            'destination' => $destination,
+            'context' => $context,
+            'label' => trim((string)($value['label'] ?? '')),
+            'urlSuffix' => trim((string)($value['urlSuffix'] ?? '')),
+            'openInNewTab' => $this->asBool($value['openInNewTab'] ?? false, false),
+        ];
     }
 
     /**

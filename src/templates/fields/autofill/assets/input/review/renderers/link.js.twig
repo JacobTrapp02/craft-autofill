@@ -1,0 +1,71 @@
+    const createLinkPreviewRenderer = () => ({
+        render({ suggestion, container }) {
+            const usedTemplate = mountTemplate('linkPreview', container);
+            const host = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="link-preview"]')
+                : container;
+            if (!(host instanceof HTMLElement)) {
+                return;
+            }
+
+            const config = suggestion && typeof suggestion.reviewEditor === 'object'
+                ? suggestion.reviewEditor
+                : {};
+
+            const parseMarkdownLink = (value) => {
+                const raw = asString(value).trim();
+                const match = raw.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+                if (!match) {
+                    return null;
+                }
+
+                return {
+                    label: asString(match[1]).trim(),
+                    url: asString(match[2]).trim(),
+                };
+            };
+
+            const setText = (attr, value) => {
+                const node = host.querySelector(`[data-autofill-review-input="${attr}"]`);
+                if (node instanceof HTMLElement) {
+                    node.textContent = asString(value).trim();
+                }
+            };
+
+            const toggleRow = (rowAttr, valueAttr, value) => {
+                const row = host.querySelector(`[data-autofill-review-input="${rowAttr}"]`);
+                const text = asString(value).trim();
+                if (row instanceof HTMLElement) {
+                    row.hidden = text === '';
+                }
+                if (text !== '') {
+                    setText(valueAttr, text);
+                }
+            };
+
+            const parsedLink = parseMarkdownLink(config.destination || '');
+            const destinationText = parsedLink?.label || asString(config.label || '').trim() || asString(config.destination || '').trim();
+            const destinationUrl = parsedLink?.url || '';
+
+            setText('link-preview-type', config.typeLabel || '');
+            setText('link-preview-destination', destinationText);
+            toggleRow('link-preview-context-row', 'link-preview-context', config.context || '');
+            toggleRow('link-preview-label-row', 'link-preview-label', config.label || '');
+            toggleRow('link-preview-suffix-row', 'link-preview-suffix', config.urlSuffix || '');
+
+            const urlNode = host.querySelector('[data-autofill-review-input="link-preview-url"]');
+            if (urlNode instanceof HTMLElement) {
+                const urlText = destinationUrl !== '' && destinationUrl !== destinationText ? destinationUrl : '';
+                urlNode.hidden = urlText === '';
+                urlNode.textContent = urlText;
+            }
+
+            const targetBadge = host.querySelector('[data-autofill-review-input="link-preview-target-badge"]');
+            if (targetBadge instanceof HTMLElement) {
+                targetBadge.hidden = !config.openInNewTab;
+            }
+        },
+        readValue({ suggestion }) {
+            return suggestion?.value ?? {};
+        },
+    });

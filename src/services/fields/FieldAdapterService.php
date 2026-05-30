@@ -21,6 +21,7 @@ use jtdev\craftautofill\services\fields\adapters\FieldAdapterInterface;
 use jtdev\craftautofill\services\fields\adapters\IconFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\JsonFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\LightswitchFieldAdapter;
+use jtdev\craftautofill\services\fields\adapters\LinkFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\MoneyFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\MultiSelectFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\NumberFieldAdapter;
@@ -56,6 +57,7 @@ class FieldAdapterService extends Component
             $this->registerAdapter(new CountryFieldAdapter());
             $this->registerAdapter(new ButtonGroupFieldAdapter());
             $this->registerAdapter(new IconFieldAdapter());
+            $this->registerAdapter(new LinkFieldAdapter());
             $this->registerAdapter(new JsonFieldAdapter());
             $this->registerAdapter(new RangeFieldAdapter());
             $this->registerAdapter(new MoneyFieldAdapter());
