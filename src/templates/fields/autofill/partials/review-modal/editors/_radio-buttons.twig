@@ -1,0 +1,13 @@
+{% import '_includes/forms.twig' as forms %}
+
+<div data-autofill-review-input="radio-buttons">
+    {{ forms.radioGroup({
+        name: 'autofillReviewRadio',
+        options: [
+            {
+                label: 'Placeholder',
+                value: '__placeholder__',
+            },
+        ],
+    }) }}
+</div>

@@ -10,6 +10,10 @@ This plugin requires Craft CMS 5.0.0 or later, and PHP 8.2 or later.
 
 You can install this plugin from the Plugin Store or with Composer.
 
+## Notes
+
+Deferred maintenance/refactor follow-ups are tracked in [TECH_DEBT.md](TECH_DEBT.md).
+
 #### From the Plugin Store
 
 Go to the Plugin Store in your project’s Control Panel and search for “Autofill”. Then press “Install”.

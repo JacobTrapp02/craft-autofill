@@ -49,6 +49,131 @@
         },
     });
 
+    const setChoiceRowLabel = (row, textValue) => {
+        const label = row.querySelector('label');
+        if (!(label instanceof HTMLLabelElement)) {
+            return;
+        }
+
+        label.textContent = textValue;
+    };
+
+    const createCheckboxGroupRenderer = ({ templateType, hostSelector, groupSelector, optionInputType, optionInputAttr }) => ({
+        render({ suggestion, editorConfig, container }) {
+            const usedTemplate = mountTemplate(templateType, container);
+            const host = usedTemplate
+                ? container.querySelector(hostSelector)
+                : container;
+            if (!(host instanceof HTMLElement)) {
+                return;
+            }
+
+            const group = host.querySelector(groupSelector);
+            if (!(group instanceof HTMLElement)) {
+                return;
+            }
+
+            const sampleRow = group.firstElementChild instanceof HTMLElement
+                ? group.firstElementChild.cloneNode(true)
+                : null;
+
+            if (!(sampleRow instanceof HTMLElement)) {
+                return;
+            }
+
+            group.innerHTML = '';
+
+            const options = Array.isArray(editorConfig.options) ? editorConfig.options : [];
+            const selectedValues = new Set(asStringArray(suggestion.value));
+            const groupName = `autofill-review-${templateType}-${Math.random().toString(36).slice(2)}`;
+
+            for (const [index, option] of options.entries()) {
+                if (!option || typeof option !== 'object') {
+                    continue;
+                }
+
+                const optionValue = asString(option.value ?? '').trim();
+                if (optionValue === '') {
+                    continue;
+                }
+
+                const optionLabel = asString(option.label ?? optionValue);
+                const row = sampleRow.cloneNode(true);
+                if (!(row instanceof HTMLElement)) {
+                    continue;
+                }
+
+                row.querySelectorAll('input:not(.checkbox):not(.radio)').forEach((node) => node.remove());
+
+                const input = row.querySelector(optionInputType === 'radio' ? 'input.radio' : 'input.checkbox');
+                if (!(input instanceof HTMLInputElement)) {
+                    continue;
+                }
+
+                const inputId = `${groupName}-${index}`;
+                input.type = optionInputType;
+                input.id = inputId;
+                input.value = optionValue;
+                input.dataset.autofillReviewInput = optionInputAttr;
+                input.checked = selectedValues.has(optionValue);
+                input.className = optionInputType;
+                if (optionInputType === 'radio') {
+                    input.name = groupName;
+                } else {
+                    input.name = `${groupName}[]`;
+                }
+
+                const label = row.querySelector('label');
+                if (label instanceof HTMLLabelElement) {
+                    label.htmlFor = inputId;
+                    label.id = `${inputId}-label`;
+                }
+                setChoiceRowLabel(row, optionLabel === '' ? optionValue : optionLabel);
+
+                group.appendChild(row);
+            }
+        },
+        readValue({ suggestion, container }) {
+            const matches = Array.from(container.querySelectorAll(`[data-autofill-review-input="${optionInputAttr}"]`))
+                .filter((input) => input instanceof HTMLInputElement && input.checked);
+
+            if (optionInputType === 'radio') {
+                const selected = matches[0];
+                return selected instanceof HTMLInputElement
+                    ? asString(selected.value).trim()
+                    : asString(suggestion?.value ?? '');
+            }
+
+            return matches
+                .map((input) => asString(input.value).trim())
+                .filter((value) => value !== '');
+        },
+    });
+
+    const createMultiSelectRenderer = () => createCheckboxGroupRenderer({
+        templateType: 'multiselect',
+        hostSelector: '[data-autofill-review-input="multiselect"]',
+        groupSelector: '.checkbox-group',
+        optionInputType: 'checkbox',
+        optionInputAttr: 'multiselect-option',
+    });
+
+    const createCheckboxesRenderer = () => createCheckboxGroupRenderer({
+        templateType: 'checkboxes',
+        hostSelector: '[data-autofill-review-input="checkboxes"]',
+        groupSelector: '.checkbox-group',
+        optionInputType: 'checkbox',
+        optionInputAttr: 'checkbox-option',
+    });
+
+    const createRadioButtonsRenderer = () => createCheckboxGroupRenderer({
+        templateType: 'radioButtons',
+        hostSelector: '[data-autofill-review-input="radio-buttons"]',
+        groupSelector: '.radio-group',
+        optionInputType: 'radio',
+        optionInputAttr: 'radio-option',
+    });
+
     const createButtonGroupRenderer = () => ({
         render({ suggestion, editorConfig, container }) {
             const usedTemplate = mountTemplate('buttonGroup', container);
@@ -122,4 +247,3 @@
             return asString(suggestion?.value ?? '');
         },
     });
-

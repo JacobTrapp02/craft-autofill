@@ -1,4 +1,14 @@
     const asString = (value) => (value === null || value === undefined ? '' : String(value));
+    const asStringArray = (value) => {
+        if (Array.isArray(value)) {
+            return value
+                .map((item) => asString(item).trim())
+                .filter((item) => item !== '');
+        }
+
+        const single = asString(value).trim();
+        return single === '' ? [] : [single];
+    };
     const pad2 = (value) => String(value).padStart(2, '0');
     const RICH_TEXT_BLOCKED_SELECTOR = 'script, iframe, object, embed, form, input, button, textarea, select, option, link, meta, base';
 
@@ -80,4 +90,3 @@
         container.appendChild(fragment);
         return true;
     };
-

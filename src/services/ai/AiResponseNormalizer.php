@@ -332,11 +332,21 @@ class AiResponseNormalizer extends Component
 
         $options = $fieldContract['options'] ?? null;
         if (is_array($options) && $options !== []) {
+            $selectionMode = (string)($fieldContract['selectionMode'] ?? 'single');
             return [
-                'type' => $adapterKey === 'buttonGroup' ? 'buttonGroup' : 'dropdown',
+                'type' => $adapterKey === 'checkboxes'
+                    ? 'checkboxes'
+                    : ($adapterKey === 'multiSelect'
+                        ? 'multiselect'
+                        : ($adapterKey === 'radioButtons'
+                            ? 'radioButtons'
+                            : ($selectionMode === 'multiple'
+                                ? 'multiselect'
+                                : ($adapterKey === 'buttonGroup' ? 'buttonGroup' : 'dropdown')))),
                 'source' => 'contract:options',
-                'displayValue' => $displayValueIsLabel ? $displayValue : (string)$normalizedValue,
+                'displayValue' => $displayValueIsLabel ? $displayValue : $normalizedValue,
                 'options' => $this->normalizeReviewOptions($options),
+                'selectionMode' => $selectionMode,
             ];
         }
 
@@ -406,6 +416,19 @@ class AiResponseNormalizer extends Component
             return [$normalizedValue, false];
         }
 
+        if (is_array($normalizedValue)) {
+            $labels = [];
+            $usedLabel = false;
+
+            foreach ($normalizedValue as $item) {
+                [$resolved, $isLabel] = $this->resolveDisplayValue($item, $fieldContract);
+                $labels[] = $resolved;
+                $usedLabel = $usedLabel || $isLabel;
+            }
+
+            return [$labels, $usedLabel];
+        }
+
         $normalized = trim((string)$normalizedValue);
         if ($normalized === '') {
             return [$normalizedValue, false];
@@ -453,6 +476,10 @@ class AiResponseNormalizer extends Component
             return $this->asBool($value, false);
         }
 
+        if ($type === 'array') {
+            return $this->normalizeOptionValues($value, $fieldContract);
+        }
+
         return $this->normalizeOptionValue($value, $fieldContract);
     }
 
@@ -472,6 +499,14 @@ class AiResponseNormalizer extends Component
             $errors[] = 'Suggestion value must be boolean.';
         }
 
+        if ($type === 'array' && !is_array($normalizedValue)) {
+            $errors[] = 'Suggestion value must be an array.';
+        }
+
+        if ($type !== 'array' && $this->hasMultipleNormalizedOptions($rawValue, $fieldContract)) {
+            $errors[] = 'Suggestion value must contain exactly one option.';
+        }
+
         $format = (string)($fieldContract['format'] ?? '');
         if (in_array($format, ['date', 'date-time'], true) && strtotime((string)$rawValue) === false) {
             $errors[] = 'Suggestion value must be a valid date.';
@@ -484,9 +519,21 @@ class AiResponseNormalizer extends Component
             }
         }
 
+        if ($format === 'color') {
+            $candidate = trim((string)$normalizedValue);
+            if ($candidate === '' || !$this->isValidColor($candidate)) {
+                $errors[] = 'Suggestion value must be a valid color.';
+            }
+        }
+
         $options = $fieldContract['options'] ?? null;
-        if (is_array($options) && $options !== [] && !$this->matchesOption($rawValue, $options)) {
-            $errors[] = 'Suggestion value must match one of the configured options.';
+        $allowCustomValue = $this->asBool($fieldContract['allowCustomValue'] ?? false, false);
+        if (is_array($options) && $options !== [] && !$allowCustomValue) {
+            if ($type === 'array' && !$this->matchesOptions($normalizedValue, $options)) {
+                $errors[] = 'Suggestion values must match the configured options.';
+            } elseif ($type !== 'array' && !$this->matchesOption($rawValue, $options)) {
+                $errors[] = 'Suggestion value must match one of the configured options.';
+            }
         }
 
         return $errors;
@@ -494,8 +541,36 @@ class AiResponseNormalizer extends Component
 
     private function normalizeOptionValue(mixed $value, array $fieldContract): string
     {
+        $normalizedValues = $this->normalizeOptionValues($value, $fieldContract);
+        return $normalizedValues[0] ?? '';
+    }
+
+    /**
+     * @return string[]
+     */
+    private function normalizeOptionValues(mixed $value, array $fieldContract): array
+    {
+        if (is_array($value)) {
+            $normalized = [];
+            foreach ($value as $item) {
+                $resolved = $this->normalizeOptionValue($item, $fieldContract);
+                if ($resolved !== '' && !in_array($resolved, $normalized, true)) {
+                    $normalized[] = $resolved;
+                }
+            }
+
+            return $normalized;
+        }
+
         $raw = trim((string)$value);
         $options = $fieldContract['options'] ?? null;
+
+        if ($raw !== '' && str_starts_with($raw, '[')) {
+            $decoded = Json::decodeIfJson($raw);
+            if (is_array($decoded)) {
+                return $this->normalizeOptionValues($decoded, $fieldContract);
+            }
+        }
 
         if (is_array($options)) {
             foreach ($options as $option) {
@@ -507,12 +582,23 @@ class AiResponseNormalizer extends Component
                 $optionLabel = trim((string)($option['label'] ?? ''));
 
                 if ($raw === $optionValue || strcasecmp($raw, $optionLabel) === 0) {
-                    return $optionValue;
+                    return [$optionValue];
                 }
             }
         }
 
-        return $raw;
+        if ($raw === '') {
+            return [];
+        }
+
+        $parts = preg_split('/\s*(?:,|\n|\r\n|;)\s*/', $raw) ?: [];
+        $parts = array_values(array_filter(array_map('trim', $parts), static fn(string $part) => $part !== ''));
+
+        if (count($parts) > 1) {
+            return $this->normalizeOptionValues($parts, $fieldContract);
+        }
+
+        return [$raw];
     }
 
     private function normalizeNumber(mixed $value): ?float
@@ -547,6 +633,35 @@ class AiResponseNormalizer extends Component
         }
 
         return false;
+    }
+
+    /**
+     * @param array<int, mixed> $values
+     * @param array<int, mixed> $options
+     */
+    private function matchesOptions(mixed $values, array $options): bool
+    {
+        if (!is_array($values) || $values === []) {
+            return false;
+        }
+
+        foreach ($values as $value) {
+            if (!$this->matchesOption($value, $options)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function hasMultipleNormalizedOptions(mixed $value, array $fieldContract): bool
+    {
+        return count($this->normalizeOptionValues($value, $fieldContract)) > 1;
+    }
+
+    private function isValidColor(string $value): bool
+    {
+        return preg_match('/^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', trim($value)) === 1;
     }
 
     private function isBoolLike(mixed $value): bool

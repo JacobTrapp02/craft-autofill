@@ -1,0 +1,12 @@
+{% import '_includes/forms.twig' as forms %}
+
+<div data-autofill-review-input="checkboxes">
+    {{ forms.checkboxGroup({
+        options: [
+            {
+                label: 'Placeholder',
+                value: '__placeholder__',
+            },
+        ],
+    }) }}
+</div>
