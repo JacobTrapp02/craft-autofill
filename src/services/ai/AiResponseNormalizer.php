@@ -323,6 +323,16 @@ class AiResponseNormalizer extends Component
             ];
         }
 
+        if ($format === 'time') {
+            return [
+                'type' => 'time',
+                'source' => 'contract:format=time',
+                'minuteIncrement' => max(1, (int)($fieldContract['minuteIncrement'] ?? 1)),
+                'min' => trim((string)($fieldContract['min'] ?? '')),
+                'max' => trim((string)($fieldContract['max'] ?? '')),
+            ];
+        }
+
         $type = (string)($fieldContract['type'] ?? '');
         if ($type === 'boolean') {
             return [
@@ -370,6 +380,38 @@ class AiResponseNormalizer extends Component
                 'type' => 'iconPreview',
                 'source' => 'adapter:icon',
                 'iconSvg' => $this->iconSvgForValue($normalizedValue),
+            ];
+        }
+
+        if ($adapterKey === 'range') {
+            return [
+                'type' => 'range',
+                'source' => 'adapter:range',
+                'min' => $fieldContract['min'] ?? 0,
+                'max' => $fieldContract['max'] ?? 100,
+                'step' => $fieldContract['step'] ?? 1,
+                'suffix' => trim((string)($fieldContract['suffix'] ?? '')),
+            ];
+        }
+
+        if ($adapterKey === 'money') {
+            return [
+                'type' => 'money',
+                'source' => 'adapter:money',
+                'currency' => trim((string)($fieldContract['currency'] ?? '')),
+                'currencyLabel' => trim((string)($fieldContract['currencyLabel'] ?? '')),
+                'showCurrency' => $this->asBool($fieldContract['showCurrency'] ?? false, false),
+                'decimals' => max(0, (int)($fieldContract['decimals'] ?? 2)),
+                'min' => $fieldContract['min'] ?? null,
+                'max' => $fieldContract['max'] ?? null,
+            ];
+        }
+
+        if ($adapterKey === 'json') {
+            return [
+                'type' => 'textarea',
+                'source' => 'adapter:json',
+                'displayMode' => 'json',
             ];
         }
 
@@ -512,13 +554,19 @@ class AiResponseNormalizer extends Component
             $errors[] = 'Suggestion value must be an array.';
         }
 
-        if ($type !== 'array' && $this->hasMultipleNormalizedOptions($rawValue, $fieldContract)) {
+        $options = $fieldContract['options'] ?? null;
+
+        if (is_array($options) && $options !== [] && $type !== 'array' && $this->hasMultipleNormalizedOptions($rawValue, $fieldContract)) {
             $errors[] = 'Suggestion value must contain exactly one option.';
         }
 
         $format = (string)($fieldContract['format'] ?? '');
         if (in_array($format, ['date', 'date-time'], true) && strtotime((string)$rawValue) === false) {
             $errors[] = 'Suggestion value must be a valid date.';
+        }
+
+        if ($format === 'time' && !$this->isValidTimeValue($normalizedValue)) {
+            $errors[] = 'Suggestion value must be a valid time.';
         }
 
         if ($format === 'email') {
@@ -535,7 +583,6 @@ class AiResponseNormalizer extends Component
             }
         }
 
-        $options = $fieldContract['options'] ?? null;
         $allowCustomValue = $this->asBool($fieldContract['allowCustomValue'] ?? false, false);
         if (is_array($options) && $options !== [] && !$allowCustomValue) {
             if ($type === 'array' && !$this->matchesOptions($normalizedValue, $options)) {
@@ -622,6 +669,21 @@ class AiResponseNormalizer extends Component
         }
 
         return (float)$cleaned;
+    }
+
+    private function isValidTimeValue(mixed $value): bool
+    {
+        $raw = trim((string)$value);
+        if ($raw === '') {
+            return false;
+        }
+
+        if (preg_match('/^\d{2}:\d{2}$/', $raw) !== 1 && preg_match('/^\d{2}:\d{2}:\d{2}$/', $raw) !== 1) {
+            return false;
+        }
+
+        [$hour, $minute, $second] = array_pad(array_map('intval', explode(':', $raw)), 3, 0);
+        return $hour >= 0 && $hour <= 23 && $minute >= 0 && $minute <= 59 && $second >= 0 && $second <= 59;
     }
 
     /**

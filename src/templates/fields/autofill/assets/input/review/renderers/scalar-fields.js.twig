@@ -1,0 +1,172 @@
+    const normalizeRangeNumber = (value) => {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            return value;
+        }
+
+        const raw = asString(value).trim();
+        if (raw === '' || Number.isNaN(Number(raw))) {
+            return null;
+        }
+
+        return Number(raw);
+    };
+
+    const formatFixedNumber = (value, decimals) => {
+        if (!Number.isFinite(value)) {
+            return '';
+        }
+
+        const normalizedDecimals = Math.max(0, Number(decimals) || 0);
+        return normalizedDecimals > 0 ? value.toFixed(normalizedDecimals) : String(Math.round(value));
+    };
+
+    const toTimeFieldValue = (value) => {
+        const raw = asString(value).trim();
+        if (raw === '') {
+            return '';
+        }
+
+        const match = raw.match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/);
+        if (!match) {
+            return '';
+        }
+
+        return match[3] && match[3] !== '00'
+            ? `${match[1]}:${match[2]}:${match[3]}`
+            : `${match[1]}:${match[2]}`;
+    };
+
+    const createTimeRenderer = () => ({
+        render({ suggestion, editorConfig, container }) {
+            const usedTemplate = mountTemplate('time', container);
+            const input = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="time"]')
+                : (() => {
+                    const element = document.createElement('input');
+                    element.type = 'time';
+                    element.className = 'text fullwidth';
+                    container.appendChild(element);
+                    return element;
+                })();
+            if (!(input instanceof HTMLInputElement)) {
+                return;
+            }
+
+            const minuteIncrement = Math.max(1, Number(editorConfig?.minuteIncrement) || 1);
+            input.step = String(minuteIncrement * 60);
+
+            const minValue = toTimeFieldValue(editorConfig?.min ?? '');
+            const maxValue = toTimeFieldValue(editorConfig?.max ?? '');
+            input.min = minValue;
+            input.max = maxValue;
+            input.value = toTimeFieldValue(suggestion.value ?? '');
+        },
+        readValue({ container }) {
+            const input = container.querySelector('[data-autofill-review-input="time"], input[type="time"]');
+            return input instanceof HTMLInputElement ? input.value : '';
+        },
+    });
+
+    const createRangeRenderer = () => ({
+        render({ suggestion, editorConfig, container }) {
+            const usedTemplate = mountTemplate('range', container);
+            let slider = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="range-slider"]')
+                : null;
+            let numberInput = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="range-number"]')
+                : null;
+            const suffix = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="range-suffix"]')
+                : null;
+
+            if (!(slider instanceof HTMLInputElement) || !(numberInput instanceof HTMLInputElement)) {
+                return;
+            }
+
+            const min = normalizeRangeNumber(editorConfig?.min ?? 0);
+            const max = normalizeRangeNumber(editorConfig?.max ?? 100);
+            const step = normalizeRangeNumber(editorConfig?.step ?? 1);
+            const value = normalizeRangeNumber(suggestion.value ?? min ?? 0);
+
+            slider.min = String(min ?? 0);
+            slider.max = String(max ?? 100);
+            slider.step = String(step ?? 1);
+            numberInput.min = String(min ?? 0);
+            numberInput.max = String(max ?? 100);
+            numberInput.step = String(step ?? 1);
+
+            const normalizedValue = value ?? min ?? 0;
+            slider.value = String(normalizedValue);
+            numberInput.value = String(normalizedValue);
+
+            const syncFrom = (source, target) => {
+                const next = normalizeRangeNumber(source.value);
+                if (next === null) {
+                    return;
+                }
+                target.value = String(next);
+            };
+
+            slider.oninput = () => syncFrom(slider, numberInput);
+            numberInput.oninput = () => syncFrom(numberInput, slider);
+
+            if (suffix instanceof HTMLElement) {
+                const suffixText = asString(editorConfig?.suffix ?? '').trim();
+                suffix.textContent = suffixText;
+                suffix.hidden = suffixText === '';
+            }
+        },
+        readValue({ container }) {
+            const input = container.querySelector('[data-autofill-review-input="range-number"], input[type="number"]');
+            if (!(input instanceof HTMLInputElement)) {
+                return '';
+            }
+
+            const raw = input.value.trim();
+            if (raw === '') {
+                return '';
+            }
+
+            const parsed = Number(raw);
+            return Number.isInteger(parsed) ? parsed : parsed;
+        },
+    });
+
+    const createMoneyRenderer = () => ({
+        render({ suggestion, editorConfig, container }) {
+            const usedTemplate = mountTemplate('money', container);
+            const input = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="money"]')
+                : null;
+            const currency = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="money-currency"]')
+                : null;
+
+            if (!(input instanceof HTMLInputElement)) {
+                return;
+            }
+
+            const raw = asString(suggestion.value ?? '').trim();
+            input.value = raw;
+
+            if (currency instanceof HTMLElement) {
+                const label = asString(editorConfig?.currencyLabel ?? editorConfig?.currency ?? '').trim();
+                const showCurrency = Boolean(editorConfig?.showCurrency) && label !== '';
+                currency.textContent = label;
+                currency.hidden = !showCurrency;
+            }
+
+            const decimals = Math.max(0, Number(editorConfig?.decimals) || 0);
+            const min = normalizeRangeNumber(editorConfig?.min);
+            const max = normalizeRangeNumber(editorConfig?.max);
+            input.inputMode = 'decimal';
+            input.readOnly = true;
+            input.placeholder = decimals > 0 ? formatFixedNumber(0, decimals) : '0';
+            input.min = min === null ? '' : formatFixedNumber(min, decimals);
+            input.max = max === null ? '' : formatFixedNumber(max, decimals);
+        },
+        readValue({ suggestion }) {
+            return asString(suggestion?.value ?? '').trim();
+        },
+    });

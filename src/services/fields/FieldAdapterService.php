@@ -19,13 +19,17 @@ use jtdev\craftautofill\services\fields\adapters\EmailFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\EntriesFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\FieldAdapterInterface;
 use jtdev\craftautofill\services\fields\adapters\IconFieldAdapter;
+use jtdev\craftautofill\services\fields\adapters\JsonFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\LightswitchFieldAdapter;
+use jtdev\craftautofill\services\fields\adapters\MoneyFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\MultiSelectFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\NumberFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\PlainTextFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\RadioButtonsFieldAdapter;
+use jtdev\craftautofill\services\fields\adapters\RangeFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\SeomaticFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\TagsFieldAdapter;
+use jtdev\craftautofill\services\fields\adapters\TimeFieldAdapter;
 
 class FieldAdapterService extends Component
 {
@@ -43,6 +47,7 @@ class FieldAdapterService extends Component
             $this->registerAdapter(new LightswitchFieldAdapter());
             $this->registerAdapter(new NumberFieldAdapter());
             $this->registerAdapter(new DateFieldAdapter());
+            $this->registerAdapter(new TimeFieldAdapter());
             $this->registerAdapter(new DropdownFieldAdapter());
             $this->registerAdapter(new CheckboxesFieldAdapter());
             $this->registerAdapter(new MultiSelectFieldAdapter());
@@ -51,6 +56,9 @@ class FieldAdapterService extends Component
             $this->registerAdapter(new CountryFieldAdapter());
             $this->registerAdapter(new ButtonGroupFieldAdapter());
             $this->registerAdapter(new IconFieldAdapter());
+            $this->registerAdapter(new JsonFieldAdapter());
+            $this->registerAdapter(new RangeFieldAdapter());
+            $this->registerAdapter(new MoneyFieldAdapter());
             $this->registerAdapter(new EmailFieldAdapter());
             $this->registerAdapter(new AddressesFieldAdapter());
             $this->registerAdapter(new CategoriesFieldAdapter());

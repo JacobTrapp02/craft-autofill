@@ -1,0 +1,17 @@
+{% import '_includes/forms.twig' as forms %}
+
+<div class="autofill-review-editor-money">
+    <div class="autofill-review-editor-money__currency" data-autofill-review-input="money-currency" hidden></div>
+    {{ forms.text({
+        value: '',
+        readonly: true,
+        inputAttributes: {
+            inputmode: 'decimal',
+            spellcheck: 'false',
+            data: {
+                'autofill-review-input': 'money',
+            },
+        },
+    }) }}
+    <p class="autofill-review-editor-money__hint">Preview only. Adjust the money value in Craft if needed.</p>
+</div>

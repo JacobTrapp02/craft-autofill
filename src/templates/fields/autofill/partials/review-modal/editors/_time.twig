@@ -1,0 +1,12 @@
+{% import '_includes/forms.twig' as forms %}
+
+{{ forms.text({
+    type: 'time',
+    value: '',
+    inputAttributes: {
+        step: '60',
+        data: {
+            'autofill-review-input': 'time',
+        },
+    },
+}) }}

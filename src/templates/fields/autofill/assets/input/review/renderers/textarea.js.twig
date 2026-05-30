@@ -31,6 +31,7 @@
     const createTextareaRenderer = () => ({
         render({ suggestion, editorConfig, container }) {
             const isRichText = String(editorConfig?.displayMode || '').trim().toLowerCase() === 'richtext';
+            const isJson = String(editorConfig?.displayMode || '').trim().toLowerCase() === 'json';
             if (isRichText) {
                 container.innerHTML = '';
                 const editor = document.createElement('div');
@@ -56,6 +57,7 @@
             if (!(textarea instanceof HTMLTextAreaElement)) {
                 return;
             }
+            textarea.rows = isJson ? 10 : 3;
             textarea.value = asString(suggestion.value ?? '');
         },
         readValue({ container }) {
@@ -68,4 +70,3 @@
             return textarea instanceof HTMLTextAreaElement ? textarea.value : '';
         },
     });
-

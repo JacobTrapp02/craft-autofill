@@ -1,0 +1,25 @@
+{% import '_includes/forms.twig' as forms %}
+
+<div class="autofill-review-editor-range">
+    <input
+        type="range"
+        class="range"
+        min="0"
+        max="100"
+        step="1"
+        value="0"
+        data-autofill-review-input="range-slider"
+    >
+    <div class="autofill-review-editor-range__number">
+        {{ forms.text({
+            type: 'number',
+            value: '',
+            inputAttributes: {
+                data: {
+                    'autofill-review-input': 'range-number',
+                },
+            },
+        }) }}
+        <span class="autofill-review-editor-range__suffix" data-autofill-review-input="range-suffix" hidden></span>
+    </div>
+</div>
