@@ -268,7 +268,7 @@
 .autofill-review-modal [data-autofill-review-editor] .autofill-review-editor-seomatic .field {
     margin: 0;
 }
-{% include 'autofill/fields/autofill/assets/_input-review-addresses.css.twig' %}
+{% include 'autofill/fields/autofill/assets/input/review/styles/addresses.css.twig' %}
 
 .autofill-review-modal [data-autofill-review-editor] .autofill-review-editor-related__list {
     display: flex;
@@ -337,11 +337,11 @@
 
 {% js %}
 window.__autofillPreviewConfig = {{ previewConfig|json_encode|raw }};
-{% include 'autofill/fields/autofill/assets/_input-api.js' %}
-{% include 'autofill/fields/autofill/assets/_input-field-locator.js' %}
-{% include 'autofill/fields/autofill/assets/_input-field-interaction.js' %}
-{% include 'autofill/fields/autofill/assets/_input-review-renderers.js' %}
-{% include 'autofill/fields/autofill/assets/_input-review-modal.js' %}
-{% include 'autofill/fields/autofill/assets/_input-suggestion-flow.js' %}
-{% include 'autofill/fields/autofill/assets/_input-runtime.js' %}
+{% include 'autofill/fields/autofill/assets/input/api.js.twig' %}
+{% include 'autofill/fields/autofill/assets/input/field/locator.js.twig' %}
+{% include 'autofill/fields/autofill/assets/input/field/interaction.js.twig' %}
+{% include 'autofill/fields/autofill/assets/input/review/renderers.js.twig' %}
+{% include 'autofill/fields/autofill/assets/input/review/modal.js.twig' %}
+{% include 'autofill/fields/autofill/assets/input/review/suggestion-flow.js.twig' %}
+{% include 'autofill/fields/autofill/assets/input/runtime.js.twig' %}
 {% endjs %}

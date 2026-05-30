@@ -1,0 +1,170 @@
+    const normalizeAddressesSuggestion = (value) => {
+        let input = value;
+        if (typeof input === 'string') {
+            try {
+                input = JSON.parse(input);
+            } catch (_error) {
+                input = {};
+            }
+        }
+
+        if (!input || typeof input !== 'object') {
+            return [];
+        }
+
+        const rows = Array.isArray(input.addresses)
+            ? input.addresses
+            : (Array.isArray(input) ? input : []);
+
+        return rows
+            .filter((row) => row && typeof row === 'object' && !Array.isArray(row))
+            .map((row) => ({
+                label: asString(row.label ?? row.title ?? '').trim(),
+                _id: asString(row._id ?? row.id ?? '').trim(),
+                country: asString(row.country ?? row.countryCode ?? '').trim(),
+                addressLine1: asString(row.addressLine1 ?? '').trim(),
+                addressLine2: asString(row.addressLine2 ?? '').trim(),
+                addressLine3: asString(row.addressLine3 ?? '').trim(),
+                state: asString(row.state ?? row.administrativeArea ?? '').trim(),
+                city: asString(row.city ?? row.locality ?? '').trim(),
+                zipCode: asString(row.zipCode ?? row.postalCode ?? '').trim(),
+            }));
+    };
+
+    const createAddressesRenderer = () => ({
+        render({ suggestion, container }) {
+            const usedTemplate = mountTemplate('addresses', container);
+            const wrapper = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="addresses"]')
+                : null;
+            const host = wrapper instanceof HTMLElement ? wrapper : container;
+
+            let list = host.querySelector('[data-autofill-review-input="addresses-list"]');
+            let addButton = host.querySelector('[data-autofill-review-input="addresses-add"]');
+            const rowTemplate = host.querySelector('[data-autofill-review-input="address-row-template"]');
+
+            if (!(list instanceof HTMLElement)) {
+                list = document.createElement('div');
+                list.dataset.autofillReviewInput = 'addresses-list';
+                host.appendChild(list);
+            }
+
+            if (!(addButton instanceof HTMLButtonElement)) {
+                addButton = document.createElement('button');
+                addButton.type = 'button';
+                addButton.className = 'btn small';
+                addButton.textContent = 'Add Address';
+                addButton.dataset.autofillReviewInput = 'addresses-add';
+                host.appendChild(addButton);
+            }
+
+            const rows = normalizeAddressesSuggestion(suggestion?.value ?? {});
+            const safeRows = rows.length ? rows : [{}];
+
+            const readRowsFromDom = () => Array.from(
+                list.querySelectorAll('[data-autofill-review-input="address-row"]'),
+            ).map((rowEl) => {
+                const read = (key) => {
+                    const input = rowEl.querySelector(`[data-autofill-review-input="address-${key}"]`);
+                    return input instanceof HTMLInputElement ? input.value.trim() : '';
+                };
+
+                return {
+                    _id: read('id'),
+                    label: read('label'),
+                    country: read('country'),
+                    addressLine1: read('addressLine1'),
+                    addressLine2: read('addressLine2'),
+                    addressLine3: read('addressLine3'),
+                    state: read('state'),
+                    city: read('city'),
+                    zipCode: read('zipCode'),
+                };
+            });
+
+            const rerender = (nextRows) => {
+                list.innerHTML = '';
+                nextRows.forEach((row, idx) => {
+                    let card = null;
+                    if (rowTemplate instanceof HTMLTemplateElement) {
+                        const fragment = rowTemplate.content.cloneNode(true);
+                        card = fragment.querySelector('[data-autofill-review-input="address-row"]');
+                    }
+
+                    if (!(card instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    const set = (key, value) => {
+                        const input = card.querySelector(`[data-autofill-review-input="address-${key}"]`);
+                        if (input instanceof HTMLInputElement) {
+                            input.value = asString(value ?? '');
+                        }
+                    };
+
+                    const heading = card.querySelector('[data-autofill-review-input="address-heading"]');
+                    if (heading instanceof HTMLElement) {
+                        heading.textContent = `Address ${idx + 1}`;
+                    }
+
+                    set('id', row._id ?? '');
+                    set('label', row.label ?? '');
+                    set('country', row.country ?? '');
+                    set('addressLine1', row.addressLine1 ?? '');
+                    set('addressLine2', row.addressLine2 ?? '');
+                    set('addressLine3', row.addressLine3 ?? '');
+                    set('state', row.state ?? '');
+                    set('city', row.city ?? '');
+                    set('zipCode', row.zipCode ?? '');
+
+                    const removeBtn = card.querySelector('[data-autofill-review-input="address-remove"]');
+                    if (removeBtn instanceof HTMLButtonElement) {
+                        removeBtn.addEventListener('click', () => {
+                            const currentRows = readRowsFromDom();
+                            currentRows.splice(idx, 1);
+                            rerender(currentRows);
+                        });
+                    }
+                    list.appendChild(card);
+                });
+            };
+
+            rerender(safeRows);
+
+            if (!addButton.dataset.autofillBound) {
+                addButton.addEventListener('click', () => {
+                    const nextRows = readRowsFromDom();
+                    nextRows.push({});
+                    rerender(nextRows);
+                });
+                addButton.dataset.autofillBound = '1';
+            }
+        },
+        readValue({ container }) {
+            const wrapper = container.querySelector('[data-autofill-review-input="addresses"]');
+            const host = wrapper instanceof HTMLElement ? wrapper : container;
+            const rowEls = Array.from(host.querySelectorAll('[data-autofill-review-input="address-row"]'));
+
+            const rows = rowEls.map((rowEl) => {
+                const read = (key) => {
+                    const input = rowEl.querySelector(`[data-autofill-review-input="address-${key}"]`);
+                    return input instanceof HTMLInputElement ? input.value.trim() : '';
+                };
+
+                return {
+                    _id: read('id'),
+                    label: read('label'),
+                    country: read('country'),
+                    addressLine1: read('addressLine1'),
+                    addressLine2: read('addressLine2'),
+                    addressLine3: read('addressLine3'),
+                    state: read('state'),
+                    city: read('city'),
+                    zipCode: read('zipCode'),
+                };
+            }).filter((row) => Object.values(row).some((value) => value !== ''));
+
+            return { addresses: rows };
+        },
+    });
+

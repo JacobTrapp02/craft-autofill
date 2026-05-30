@@ -1,0 +1,79 @@
+    const createDateRenderer = () => ({
+        render({ suggestion, container }) {
+            const usedTemplate = mountTemplate('date', container);
+            const input = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="date"]')
+                : (() => {
+                    const element = document.createElement('input');
+                    element.type = 'date';
+                    element.className = 'text fullwidth';
+                    container.appendChild(element);
+                    return element;
+                })();
+            if (!(input instanceof HTMLInputElement)) {
+                return;
+            }
+            const parsedDate = parseSuggestionDate(suggestion.value);
+            input.value = parsedDate ? toDateInputValue(parsedDate) : '';
+        },
+        readValue({ container }) {
+            const input = container.querySelector('[data-autofill-review-input="date"], input[type="date"]');
+            return input instanceof HTMLInputElement ? input.value : '';
+        },
+    });
+
+    const createDateTimeRenderer = () => ({
+        render({ suggestion, container }) {
+            const usedTemplate = mountTemplate('datetime', container);
+            let dateInput = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="datetime-date"]')
+                : null;
+            let timeInput = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="datetime-time"]')
+                : null;
+
+            if (!(dateInput instanceof HTMLInputElement) || !(timeInput instanceof HTMLInputElement)) {
+                container.innerHTML = '';
+                const wrapper = document.createElement('div');
+                wrapper.className = 'autofill-review-editor-datetime';
+                const fallbackDateInput = document.createElement('input');
+                fallbackDateInput.type = 'date';
+                fallbackDateInput.className = 'text fullwidth';
+                const fallbackTimeInput = document.createElement('input');
+                fallbackTimeInput.type = 'time';
+                fallbackTimeInput.className = 'text fullwidth';
+                fallbackTimeInput.step = '60';
+                wrapper.appendChild(fallbackDateInput);
+                wrapper.appendChild(fallbackTimeInput);
+                container.appendChild(wrapper);
+                dateInput = fallbackDateInput;
+                timeInput = fallbackTimeInput;
+            }
+
+            const parsedDate = parseSuggestionDate(suggestion.value);
+            if (parsedDate) {
+                dateInput.value = toDateInputValue(parsedDate);
+                timeInput.value = toTimeInputValue(parsedDate);
+            } else {
+                dateInput.value = '';
+                timeInput.value = '';
+            }
+        },
+        readValue({ container }) {
+            const dateInput = container.querySelector('[data-autofill-review-input="datetime-date"], input[type="date"]');
+            const timeInput = container.querySelector('[data-autofill-review-input="datetime-time"], input[type="time"]');
+            const dateValue = dateInput instanceof HTMLInputElement ? dateInput.value : '';
+            const timeValue = timeInput instanceof HTMLInputElement ? timeInput.value : '';
+
+            if (dateValue === '') {
+                return '';
+            }
+
+            if (timeValue === '') {
+                return dateValue;
+            }
+
+            return `${dateValue}T${timeValue}`;
+        },
+    });
+

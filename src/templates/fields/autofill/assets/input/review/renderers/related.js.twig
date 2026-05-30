@@ -1,0 +1,92 @@
+    const normalizeRelatedTitles = (value) => {
+        const fromArray = (arr) => arr
+            .map((item) => asString(item).trim())
+            .filter((item) => item !== '');
+
+        if (Array.isArray(value)) {
+            return fromArray(value);
+        }
+
+        if (value && typeof value === 'object') {
+            const selected = value.selectedTitles;
+            if (Array.isArray(selected)) {
+                return fromArray(selected);
+            }
+        }
+
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (trimmed === '') {
+                return [];
+            }
+
+            try {
+                const parsed = JSON.parse(trimmed);
+                return normalizeRelatedTitles(parsed);
+            } catch (_error) {
+                return trimmed
+                    .split(/[\r\n,]+/)
+                    .map((item) => item.trim())
+                    .filter((item) => item !== '');
+            }
+        }
+
+        return [];
+    };
+
+    const createRelatedTitlesRenderer = () => ({
+        render({ suggestion, container }) {
+            const usedTemplate = mountTemplate('relatedChips', container);
+            const wrapper = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="related"]')
+                : null;
+            const host = wrapper instanceof HTMLElement ? wrapper : container;
+
+            let list = host.querySelector('[data-autofill-review-input="related-list"]');
+            if (!(list instanceof HTMLElement)) {
+                list = document.createElement('div');
+                list.dataset.autofillReviewInput = 'related-list';
+                host.appendChild(list);
+            }
+
+            const titles = normalizeRelatedTitles(suggestion?.value ?? {});
+            list.innerHTML = '';
+
+            titles.forEach((title) => {
+                const chip = document.createElement('span');
+                chip.className = 'autofill-related-chip';
+                chip.dataset.autofillReviewInput = 'related-chip';
+                chip.dataset.title = title;
+
+                const label = document.createElement('span');
+                label.className = 'autofill-related-chip__label';
+                label.textContent = title;
+                chip.appendChild(label);
+
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'autofill-related-chip__remove';
+                remove.setAttribute('aria-label', `Remove ${title}`);
+                remove.textContent = '×';
+                remove.addEventListener('click', () => {
+                    chip.remove();
+                });
+                chip.appendChild(remove);
+
+                list.appendChild(chip);
+            });
+        },
+        readValue({ container }) {
+            const chips = Array.from(container.querySelectorAll('[data-autofill-review-input="related-chip"]'));
+            if (chips.length === 0) {
+                return { selectedTitles: [] };
+            }
+
+            const titles = chips
+                .map((chip) => asString(chip instanceof HTMLElement ? chip.dataset.title : '').trim())
+                .filter((title) => title !== '');
+
+            return { selectedTitles: titles };
+        },
+    });
+

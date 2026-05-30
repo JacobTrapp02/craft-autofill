@@ -1,0 +1,83 @@
+    const asString = (value) => (value === null || value === undefined ? '' : String(value));
+    const pad2 = (value) => String(value).padStart(2, '0');
+    const RICH_TEXT_BLOCKED_SELECTOR = 'script, iframe, object, embed, form, input, button, textarea, select, option, link, meta, base';
+
+    const toDateInputValue = (date) => (
+        `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
+    );
+
+    const toTimeInputValue = (date) => (
+        `${pad2(date.getHours())}:${pad2(date.getMinutes())}`
+    );
+
+    const parseSuggestionDate = (value) => {
+        const raw = asString(value).trim();
+        if (raw === '') {
+            return null;
+        }
+
+        const parsed = new Date(raw);
+        if (!Number.isNaN(parsed.getTime())) {
+            return parsed;
+        }
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+            const parts = raw.split('-').map((item) => Number(item));
+            return new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+        }
+
+        return null;
+    };
+
+    const toBool = (value) => {
+        if (typeof value === 'boolean') {
+            return value;
+        }
+
+        if (typeof value === 'number') {
+            return value !== 0;
+        }
+
+        const normalized = asString(value).trim().toLowerCase();
+        if (normalized === '') {
+            return false;
+        }
+
+        return ['1', 'true', 'on', 'yes'].includes(normalized);
+    };
+
+    const getEditorConfig = (suggestion) => {
+        const reviewEditor = suggestion && typeof suggestion.reviewEditor === 'object'
+            ? suggestion.reviewEditor
+            : null;
+        const type = asString(reviewEditor?.type || '').trim() || 'textarea';
+
+        return {
+            type,
+            config: reviewEditor || {},
+        };
+    };
+
+    const getTemplateSelector = (type) => {
+        const safeType = window.CSS && typeof window.CSS.escape === 'function'
+            ? window.CSS.escape(type)
+            : type.replace(/"/g, '\\"');
+        return `[data-autofill-review-template="${safeType}"]`;
+    };
+
+    const mountTemplate = (type, container) => {
+        if (!(container instanceof HTMLElement)) {
+            return false;
+        }
+
+        const template = document.querySelector(getTemplateSelector(type));
+        if (!(template instanceof HTMLTemplateElement)) {
+            return false;
+        }
+
+        container.innerHTML = '';
+        const fragment = template.content.cloneNode(true);
+        container.appendChild(fragment);
+        return true;
+    };
+

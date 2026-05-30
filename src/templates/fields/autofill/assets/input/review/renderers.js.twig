@@ -1,0 +1,54 @@
+(() => {
+    // Registry of suggestion editor renderers used by the review modal.
+    window.AutofillInputRuntime = window.AutofillInputRuntime || {};
+    const runtime = window.AutofillInputRuntime;
+
+{% include 'autofill/fields/autofill/assets/input/review/renderers/shared.js.twig' %}
+{% include 'autofill/fields/autofill/assets/input/review/renderers/textarea.js.twig' %}
+{% include 'autofill/fields/autofill/assets/input/review/renderers/choices.js.twig' %}
+{% include 'autofill/fields/autofill/assets/input/review/renderers/seomatic.js.twig' %}
+{% include 'autofill/fields/autofill/assets/input/review/renderers/addresses.js.twig' %}
+{% include 'autofill/fields/autofill/assets/input/review/renderers/related.js.twig' %}
+{% include 'autofill/fields/autofill/assets/input/review/renderers/date-time.js.twig' %}
+{% include 'autofill/fields/autofill/assets/input/review/renderers/lightswitch.js.twig' %}
+
+    const reviewRenderers = {
+        textarea: createTextareaRenderer(),
+        dropdown: createDropdownRenderer(),
+        buttonGroup: createButtonGroupRenderer(),
+        seomaticBasic: createSeomaticBasicRenderer(),
+        addresses: createAddressesRenderer(),
+        relatedTitles: createRelatedTitlesRenderer(),
+        date: createDateRenderer(),
+        datetime: createDateTimeRenderer(),
+        lightswitch: createLightswitchRenderer(),
+    };
+
+    runtime.renderReviewEditor = ({ suggestion, container }) => {
+        if (!(container instanceof HTMLElement)) {
+            return;
+        }
+
+        container.innerHTML = '';
+        const { type, config } = getEditorConfig(suggestion);
+        const renderer = reviewRenderers[type] || reviewRenderers.textarea;
+        renderer.render({
+            suggestion,
+            editorConfig: config,
+            container,
+        });
+    };
+
+    runtime.readReviewEditorValue = ({ suggestion, container }) => {
+        if (!(container instanceof HTMLElement)) {
+            return asString(suggestion?.value ?? '');
+        }
+
+        const { type } = getEditorConfig(suggestion);
+        const renderer = reviewRenderers[type] || reviewRenderers.textarea;
+        return renderer.readValue({
+            suggestion,
+            container,
+        });
+    };
+})();

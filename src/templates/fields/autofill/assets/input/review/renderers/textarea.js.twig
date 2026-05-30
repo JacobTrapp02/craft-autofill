@@ -1,0 +1,71 @@
+    const sanitizeRichTextHtml = (rawValue) => {
+        const input = asString(rawValue);
+        if (input.trim() === '') {
+            return '';
+        }
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(input, 'text/html');
+
+        doc.querySelectorAll(RICH_TEXT_BLOCKED_SELECTOR).forEach((node) => node.remove());
+
+        doc.querySelectorAll('*').forEach((element) => {
+            Array.from(element.attributes).forEach((attribute) => {
+                const name = attribute.name.toLowerCase();
+                const value = attribute.value || '';
+
+                if (name.startsWith('on')) {
+                    element.removeAttribute(attribute.name);
+                    return;
+                }
+
+                if ((name === 'href' || name === 'src') && /^\s*javascript:/i.test(value)) {
+                    element.removeAttribute(attribute.name);
+                }
+            });
+        });
+
+        return (doc.body.innerHTML || '').trim();
+    };
+
+    const createTextareaRenderer = () => ({
+        render({ suggestion, editorConfig, container }) {
+            const isRichText = String(editorConfig?.displayMode || '').trim().toLowerCase() === 'richtext';
+            if (isRichText) {
+                container.innerHTML = '';
+                const editor = document.createElement('div');
+                editor.className = 'autofill-review-richtext-editor text fullwidth';
+                editor.setAttribute('contenteditable', 'true');
+                editor.setAttribute('spellcheck', 'true');
+                editor.dataset.autofillReviewInput = 'richtext';
+                editor.innerHTML = sanitizeRichTextHtml(suggestion.value ?? '');
+                container.appendChild(editor);
+                return;
+            }
+
+            const usedTemplate = mountTemplate('textarea', container);
+            const textarea = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="textarea"]')
+                : (() => {
+                    const element = document.createElement('textarea');
+                    element.className = 'text fullwidth';
+                    element.rows = 3;
+                    container.appendChild(element);
+                    return element;
+                })();
+            if (!(textarea instanceof HTMLTextAreaElement)) {
+                return;
+            }
+            textarea.value = asString(suggestion.value ?? '');
+        },
+        readValue({ container }) {
+            const richText = container.querySelector('[data-autofill-review-input="richtext"]');
+            if (richText instanceof HTMLElement) {
+                return sanitizeRichTextHtml(richText.innerHTML);
+            }
+
+            const textarea = container.querySelector('[data-autofill-review-input="textarea"], textarea');
+            return textarea instanceof HTMLTextAreaElement ? textarea.value : '';
+        },
+    });
+

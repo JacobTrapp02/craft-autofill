@@ -1,0 +1,62 @@
+    const createLightswitchRenderer = () => ({
+        render({ suggestion, container }) {
+            const usedTemplate = mountTemplate('lightswitch', container);
+            const switchElement = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="lightswitch"]')
+                : null;
+
+            if (!(switchElement instanceof HTMLElement)) {
+                const wrapper = document.createElement('label');
+                wrapper.className = 'checkboxfield';
+                wrapper.style.display = 'inline-flex';
+                wrapper.style.alignItems = 'center';
+                wrapper.style.gap = '8px';
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.checked = toBool(suggestion.value);
+                const text = document.createElement('span');
+                text.textContent = input.checked ? 'On' : 'Off';
+                input.addEventListener('change', () => {
+                    text.textContent = input.checked ? 'On' : 'Off';
+                });
+                wrapper.appendChild(input);
+                wrapper.appendChild(text);
+                container.innerHTML = '';
+                container.appendChild(wrapper);
+                return;
+            }
+
+            const setSwitchState = (isOn) => {
+                switchElement.classList.toggle('on', isOn);
+                switchElement.classList.toggle('indeterminate', false);
+                switchElement.setAttribute('aria-checked', isOn ? 'true' : 'false');
+                const hiddenInput = switchElement.querySelector('input[type="hidden"]');
+                if (hiddenInput instanceof HTMLInputElement) {
+                    hiddenInput.value = isOn ? '1' : '';
+                }
+            };
+
+            const on = toBool(suggestion.value);
+            setSwitchState(on);
+
+            if (!switchElement.dataset.autofillBound) {
+                switchElement.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const currentOn = switchElement.classList.contains('on');
+                    setSwitchState(!currentOn);
+                });
+                switchElement.dataset.autofillBound = '1';
+            }
+        },
+        readValue({ container }) {
+            const switchElement = container.querySelector('[data-autofill-review-input="lightswitch"]');
+            if (switchElement instanceof HTMLElement) {
+                return switchElement.classList.contains('on');
+            }
+
+            const input = container.querySelector('input[type="checkbox"]');
+            return input instanceof HTMLInputElement ? input.checked : false;
+        },
+    });
+
