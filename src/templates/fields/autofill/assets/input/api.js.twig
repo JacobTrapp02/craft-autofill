@@ -71,4 +71,14 @@
 
         return data.applied || null;
     };
+
+    runtime.fetchIconSvg = async ({ endpoint, icon }) => {
+        const data = await postJson(
+            endpoint,
+            { icon },
+            'Could not load icon preview.',
+        );
+
+        return String(data.iconSvg || '');
+    };
 })();

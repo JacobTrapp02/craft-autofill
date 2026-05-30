@@ -16,6 +16,7 @@
     }
 
     const config = window.__autofillPreviewConfig || {};
+    runtime.iconSvgActionUrl = String(config.iconSvgActionUrl || '');
     const isTestMode = config.testMode !== false;
     const applySuggestionServer = async (suggestion) => {
         const applySuggestionActionUrl = config.applySuggestionActionUrl || '';

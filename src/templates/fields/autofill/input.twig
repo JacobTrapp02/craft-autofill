@@ -7,6 +7,7 @@
     generateSuggestionsActionUrl: actionUrl('autofill/prompt-preview/generate-suggestions'),
     responseNormalizeActionUrl: actionUrl('autofill/response-preview/normalize-response'),
     applySuggestionActionUrl: actionUrl('autofill/response-preview/apply-suggestion'),
+    iconSvgActionUrl: actionUrl('app/icon-svg'),
 } %}
 {% set isTestMode = testMode ?? true %}
 {% set showUserPromptInput = field.showUserPromptInput ?? true %}
@@ -195,6 +196,51 @@
 
 .autofill-review-modal [data-autofill-review-editor] textarea {
     min-height: 88px;
+}
+
+.autofill-review-icon {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 52px;
+    padding: 10px 12px;
+    border: 1px solid #c8d2e0;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.autofill-review-icon__glyph {
+    display: inline-flex;
+    flex: 0 0 56px;
+    align-items: center;
+    justify-content: center;
+    min-width: 56px;
+    width: 56px;
+    height: 42px;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid #d8e1ec;
+    color: #2f3a47;
+}
+
+.autofill-review-icon__glyph svg {
+    width: 20px;
+    height: 20px;
+}
+
+.autofill-review-icon__meta {
+    min-width: 0;
+}
+
+.autofill-review-icon__name {
+    font-size: 13px !important;
+}
+
+.autofill-review-icon__hint {
+    margin: 4px 0 0;
+    font-size: 12px;
+    line-height: 1.35;
+    color: #67778a;
 }
 
 .autofill-review-modal--richtext {

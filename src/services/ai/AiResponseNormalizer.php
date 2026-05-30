@@ -7,6 +7,7 @@ namespace jtdev\craftautofill\services\ai;
 use Craft;
 use craft\base\Component;
 use craft\base\FieldInterface;
+use craft\helpers\Cp;
 use craft\helpers\Json;
 use jtdev\craftautofill\AutofillPlugin;
 use jtdev\craftautofill\models\ai\AiGenerationRequest;
@@ -364,6 +365,14 @@ class AiResponseNormalizer extends Component
             ];
         }
 
+        if ($adapterKey === 'icon') {
+            return [
+                'type' => 'iconPreview',
+                'source' => 'adapter:icon',
+                'iconSvg' => $this->iconSvgForValue($normalizedValue),
+            ];
+        }
+
         if (in_array($adapterKey, ['categories', 'tags', 'entries'], true)) {
             return [
                 'type' => 'relatedTitles',
@@ -662,6 +671,20 @@ class AiResponseNormalizer extends Component
     private function isValidColor(string $value): bool
     {
         return preg_match('/^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', trim($value)) === 1;
+    }
+
+    private function iconSvgForValue(mixed $value): string
+    {
+        $icon = trim((string)$value);
+        if ($icon === '') {
+            return '';
+        }
+
+        try {
+            return Cp::iconSvg($icon) ?? '';
+        } catch (\Throwable) {
+            return '';
+        }
     }
 
     private function isBoolLike(mixed $value): bool

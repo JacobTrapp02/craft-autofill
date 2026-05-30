@@ -18,6 +18,7 @@ use jtdev\craftautofill\services\fields\adapters\DropdownFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\EmailFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\EntriesFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\FieldAdapterInterface;
+use jtdev\craftautofill\services\fields\adapters\IconFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\LightswitchFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\MultiSelectFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\NumberFieldAdapter;
@@ -49,6 +50,7 @@ class FieldAdapterService extends Component
             $this->registerAdapter(new ColorFieldAdapter());
             $this->registerAdapter(new CountryFieldAdapter());
             $this->registerAdapter(new ButtonGroupFieldAdapter());
+            $this->registerAdapter(new IconFieldAdapter());
             $this->registerAdapter(new EmailFieldAdapter());
             $this->registerAdapter(new AddressesFieldAdapter());
             $this->registerAdapter(new CategoriesFieldAdapter());

@@ -6,6 +6,7 @@
 {% include 'autofill/fields/autofill/assets/input/review/renderers/shared.js.twig' %}
 {% include 'autofill/fields/autofill/assets/input/review/renderers/textarea.js.twig' %}
 {% include 'autofill/fields/autofill/assets/input/review/renderers/choices.js.twig' %}
+{% include 'autofill/fields/autofill/assets/input/review/renderers/icon.js.twig' %}
 {% include 'autofill/fields/autofill/assets/input/review/renderers/seomatic.js.twig' %}
 {% include 'autofill/fields/autofill/assets/input/review/renderers/addresses.js.twig' %}
 {% include 'autofill/fields/autofill/assets/input/review/renderers/related.js.twig' %}
@@ -19,6 +20,7 @@
         multiselect: createMultiSelectRenderer(),
         radioButtons: createRadioButtonsRenderer(),
         buttonGroup: createButtonGroupRenderer(),
+        iconPreview: createIconPreviewRenderer(),
         seomaticBasic: createSeomaticBasicRenderer(),
         addresses: createAddressesRenderer(),
         relatedTitles: createRelatedTitlesRenderer(),

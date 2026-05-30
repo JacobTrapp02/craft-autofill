@@ -1,0 +1,69 @@
+    const createIconPreviewRenderer = () => ({
+        render({ suggestion, container }) {
+            const usedTemplate = mountTemplate('iconPreview', container);
+            const host = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="icon-preview"]')
+                : container;
+            if (!(host instanceof HTMLElement)) {
+                return;
+            }
+
+            const glyph = host.querySelector('[data-autofill-review-input="icon-preview-glyph"]');
+            const name = host.querySelector('[data-autofill-review-input="icon-preview-name"]');
+            const iconName = asString(suggestion.value ?? '').trim();
+
+            if (name instanceof HTMLElement) {
+                name.textContent = iconName || '(none)';
+            }
+
+            if (!(glyph instanceof HTMLElement)) {
+                return;
+            }
+
+            glyph.innerHTML = '';
+            if (iconName === '') {
+                return;
+            }
+
+            const inlineSvg = asString(suggestion?.reviewEditor?.iconSvg ?? '').trim();
+            if (inlineSvg !== '') {
+                glyph.innerHTML = inlineSvg;
+                return;
+            }
+
+            const cache = window.AutofillInputRuntime._iconSvgCache = window.AutofillInputRuntime._iconSvgCache || {};
+            if (typeof cache[iconName] === 'string' && cache[iconName] !== '') {
+                glyph.innerHTML = cache[iconName];
+                return;
+            }
+
+            if (window.Craft?.icons && typeof window.Craft.icons[iconName] === 'string') {
+                cache[iconName] = window.Craft.icons[iconName];
+                glyph.innerHTML = cache[iconName];
+                return;
+            }
+
+            const endpoint = String(window.AutofillInputRuntime.iconSvgActionUrl || '');
+            if (!endpoint || typeof window.AutofillInputRuntime.fetchIconSvg !== 'function') {
+                return;
+            }
+
+            const requestKey = `${iconName}:${Date.now()}`;
+            host.dataset.iconPreviewRequestKey = requestKey;
+            window.AutofillInputRuntime.fetchIconSvg({ endpoint, icon: iconName })
+                .then((svg) => {
+                    if (host.dataset.iconPreviewRequestKey !== requestKey || !svg) {
+                        return;
+                    }
+
+                    cache[iconName] = svg;
+                    glyph.innerHTML = svg;
+                })
+                .catch(() => {
+                    // Leave the text name visible even if SVG preview fails.
+                });
+        },
+        readValue({ suggestion }) {
+            return asString(suggestion?.value ?? '');
+        },
+    });
