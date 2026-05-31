@@ -7,6 +7,7 @@ namespace jtdev\craftautofill\services\ai;
 use Craft;
 use craft\base\Component;
 use craft\base\FieldInterface;
+use craft\fields\Table as TableField;
 use craft\helpers\Cp;
 use craft\helpers\Json;
 use jtdev\craftautofill\AutofillPlugin;
@@ -87,8 +88,9 @@ class AiResponseNormalizer extends Component
 
         $suggestions = [];
         $targetFieldMap = $this->buildTargetFieldMap($config);
+        $orderedTargetFields = $this->buildOrderedTargetFields($config);
 
-        foreach ($parsed as $item) {
+        foreach ($parsed as $index => $item) {
             if (!is_array($item)) {
                 continue;
             }
@@ -101,7 +103,9 @@ class AiResponseNormalizer extends Component
             $hasRawValue = array_key_exists('value', $item);
             $valueIsNull = $hasRawValue && $item['value'] === null;
             $rawValue = $hasRawValue && !$valueIsNull ? $item['value'] : '';
-            $match = $targetFieldMap[$this->normalizeName($fieldName)] ?? null;
+            $match = $this->resolveTargetFieldMatch($fieldName, $targetFieldMap)
+                ?? $this->resolveTargetFieldMatchByOrder($index, $orderedTargetFields);
+            $displayFieldName = trim((string)($match['name'] ?? $fieldName));
             $targetFieldUid = (string)($match['targetFieldUid'] ?? '');
             $fieldContract = is_array($match['fieldContract'] ?? null) ? $match['fieldContract'] : [];
             $adapterKey = (string)($match['adapterKey'] ?? '');
@@ -113,16 +117,28 @@ class AiResponseNormalizer extends Component
                 $validationErrors[] = 'Suggestion value cannot be null.';
             }
 
+            if ($match === null) {
+                $validationErrors[] = 'Suggestion field could not be matched to a configured field.';
+            }
+
             $value = $this->normalizeSuggestionValue($targetFieldUid, $rawValue, $fieldContract);
             $validationErrors = array_merge(
                 $validationErrors,
                 $this->validateSuggestionValue($targetFieldUid, $rawValue, $value, $fieldContract)
             );
             [$displayValue, $displayValueIsLabel] = $this->resolveDisplayValue($value, $fieldContract);
-            $reviewEditor = $this->buildReviewEditorPayload($value, $fieldContract, $displayValue, $displayValueIsLabel, $adapterKey);
+            $reviewEditor = $this->buildReviewEditorPayload(
+                $targetFieldUid,
+                $value,
+                $fieldContract,
+                $displayValue,
+                $displayValueIsLabel,
+                $adapterKey,
+            );
 
             $suggestions[] = [
                 'fieldName' => $fieldName,
+                'displayFieldName' => $displayFieldName !== '' ? $displayFieldName : $fieldName,
                 'value' => $value,
                 'reviewEditor' => $reviewEditor,
                 'hasRawValue' => $hasRawValue,
@@ -263,8 +279,70 @@ class AiResponseNormalizer extends Component
         return $map;
     }
 
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildOrderedTargetFields(array $config): array
+    {
+        $ordered = [];
+
+        foreach (($config['rows'] ?? []) as $row) {
+            if (!is_array($row) || ($row['enabled'] ?? true) === false) {
+                continue;
+            }
+
+            $targetFieldUid = (string)($row['targetFieldUid'] ?? '');
+            $name = (string)($config['fieldNameByUid'][$targetFieldUid] ?? $targetFieldUid);
+            $handle = (string)($config['fieldHandleByUid'][$targetFieldUid] ?? '');
+
+            if ($name === '' || $handle === '') {
+                continue;
+            }
+
+            $ordered[] = [
+                'targetFieldUid' => $targetFieldUid,
+                'name' => $name,
+                'handle' => $handle,
+                'requiresApproval' => $row['requiresApproval'] ?? true,
+                'overrideCurrentValue' => $row['overrideCurrentValue'] ?? true,
+                'fieldContract' => $config['fieldContractsByUid'][$targetFieldUid] ?? [],
+                'adapterKey' => (string)($config['fieldAdapterKeyByUid'][$targetFieldUid] ?? ''),
+                'matchedByOrder' => true,
+            ];
+        }
+
+        return $ordered;
+    }
+
+    /**
+     * @param array<string, array<string, mixed>> $targetFieldMap
+     * @return array<string, mixed>|null
+     */
+    private function resolveTargetFieldMatch(string $fieldName, array $targetFieldMap): ?array
+    {
+        $normalized = $this->normalizeName($fieldName);
+        if ($normalized !== '' && isset($targetFieldMap[$normalized])) {
+            return $targetFieldMap[$normalized];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $orderedTargetFields
+     * @return array<string, mixed>|null
+     */
+    private function resolveTargetFieldMatchByOrder(int $index, array $orderedTargetFields): ?array
+    {
+        return $orderedTargetFields[$index] ?? null;
+    }
+
     private function normalizeSuggestionValue(string $fieldUid, mixed $value, array $fieldContract): mixed
     {
+        if ($fieldUid === '') {
+            return $this->normalizeUnmatchedSuggestionValue($value);
+        }
+
         $field = $this->getCustomField($fieldUid);
         if ($field instanceof FieldInterface) {
             $adapter = AutofillPlugin::getInstance()->getFieldAdapterService()->getAdapterForField($field);
@@ -278,6 +356,24 @@ class AiResponseNormalizer extends Component
         }
 
         return $this->normalizeByContract($value, $fieldContract);
+    }
+
+    private function normalizeUnmatchedSuggestionValue(mixed $value): mixed
+    {
+        if (is_array($value)) {
+            $encoded = Json::encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            return is_string($encoded) ? $encoded : '';
+        }
+
+        if (is_object($value)) {
+            if ($value instanceof \JsonSerializable) {
+                return $this->normalizeUnmatchedSuggestionValue($value->jsonSerialize());
+            }
+
+            return $this->normalizeUnmatchedSuggestionValue((array)$value);
+        }
+
+        return is_scalar($value) ? trim((string)$value) : '';
     }
 
     /**
@@ -302,6 +398,7 @@ class AiResponseNormalizer extends Component
      * @return array<string, mixed>
      */
     private function buildReviewEditorPayload(
+        string $fieldUid,
         mixed $normalizedValue,
         array $fieldContract,
         mixed $displayValue,
@@ -387,6 +484,10 @@ class AiResponseNormalizer extends Component
             return $this->buildLinkReviewEditorPayload($normalizedValue, $fieldContract);
         }
 
+        if ($adapterKey === 'table') {
+            return $this->buildTableReviewEditorPayload($fieldUid, $normalizedValue);
+        }
+
         if ($adapterKey === 'range') {
             return [
                 'type' => 'range',
@@ -430,6 +531,30 @@ class AiResponseNormalizer extends Component
             'type' => 'textarea',
             'source' => 'fallback:textarea',
             'displayMode' => $adapterKey === 'ckeditor' ? 'richtext' : 'default',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildTableReviewEditorPayload(string $fieldUid, mixed $normalizedValue): array
+    {
+        $previewHtml = '';
+        $field = $this->getCustomField($fieldUid);
+
+        if ($field instanceof TableField) {
+            $previewHtml = $this->tablePreviewHtmlForValue($field, $normalizedValue);
+        }
+
+        return [
+            'type' => 'tablePreview',
+            'source' => 'adapter:table',
+            'displayMode' => 'table',
+            'previewHtml' => $previewHtml,
+            'rowCount' => is_array($normalizedValue) ? count($normalizedValue) : 0,
+            'columnCount' => is_array($fieldContract['columns'] ?? null) ? count($fieldContract['columns']) : 0,
+            'staticRows' => $this->asBool($fieldContract['staticRows'] ?? false, false),
+            'columnLabels' => $this->tableReviewColumnLabels($fieldContract['columns'] ?? []),
         ];
     }
 
@@ -797,6 +922,61 @@ class AiResponseNormalizer extends Component
         }
     }
 
+    private function tablePreviewHtmlForValue(TableField $field, mixed $value): string
+    {
+        if (!is_array($value) || empty($field->columns)) {
+            return '';
+        }
+
+        try {
+            $normalizedRows = $field->normalizeValue($value, null);
+            if (!is_array($normalizedRows)) {
+                return '';
+            }
+
+            return Cp::editableTableFieldHtml([
+                'id' => sprintf('autofill-review-table-%s', $field->handle ?: $field->uid ?: uniqid('', true)),
+                'name' => $field->handle ?: 'autofillReviewTable',
+                'cols' => $field->columns,
+                'rows' => $normalizedRows,
+                'static' => true,
+                'fullWidth' => true,
+                'allowAdd' => false,
+                'allowDelete' => false,
+                'allowReorder' => false,
+                'staticRows' => (bool)$field->staticRows,
+                'includeRowId' => (bool)$field->staticRows,
+            ]);
+        } catch (\Throwable) {
+            return '';
+        }
+    }
+
+    /**
+     * @param mixed $columns
+     * @return string[]
+     */
+    private function tableReviewColumnLabels(mixed $columns): array
+    {
+        if (!is_array($columns)) {
+            return [];
+        }
+
+        $labels = [];
+        foreach ($columns as $column) {
+            if (!is_array($column)) {
+                continue;
+            }
+
+            $label = trim((string)($column['label'] ?? $column['key'] ?? ''));
+            if ($label !== '') {
+                $labels[] = $label;
+            }
+        }
+
+        return $labels;
+    }
+
     private function isBoolLike(mixed $value): bool
     {
         if (is_bool($value) || is_numeric($value)) {
@@ -839,6 +1019,11 @@ class AiResponseNormalizer extends Component
 
     private function normalizeName(mixed $value): string
     {
-        return strtolower(trim((string)$value));
+        $normalized = trim((string)$value);
+        if ($normalized === '') {
+            return '';
+        }
+
+        return strtolower($normalized);
     }
 }

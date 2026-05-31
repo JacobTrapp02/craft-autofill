@@ -1,0 +1,43 @@
+    const createTablePreviewRenderer = () => ({
+        render({ suggestion, container }) {
+            const usedTemplate = mountTemplate('tablePreview', container);
+            const host = usedTemplate
+                ? container.querySelector('[data-autofill-review-input="table-preview"]')
+                : container;
+            if (!(host instanceof HTMLElement)) {
+                return;
+            }
+
+            const frame = host.querySelector('[data-autofill-review-input="table-preview-frame"]');
+            if (!(frame instanceof HTMLElement)) {
+                return;
+            }
+
+            const config = suggestion && typeof suggestion.reviewEditor === 'object'
+                ? suggestion.reviewEditor
+                : {};
+            const rowCount = Math.max(0, Number(config.rowCount) || 0);
+
+            const previewHtml = asString(suggestion?.reviewEditor?.previewHtml ?? '').trim();
+            if (previewHtml !== '') {
+                frame.innerHTML = previewHtml;
+                return;
+            }
+
+            if (rowCount === 0) {
+                const empty = document.createElement('p');
+                empty.className = 'autofill-review-table__empty';
+                empty.textContent = 'No table rows were suggested.';
+                frame.replaceChildren(empty);
+                return;
+            }
+
+            const fallback = document.createElement('pre');
+            fallback.className = 'code';
+            fallback.textContent = JSON.stringify(suggestion?.value ?? [], null, 2);
+            frame.replaceChildren(fallback);
+        },
+        readValue({ suggestion }) {
+            return Array.isArray(suggestion?.value) ? suggestion.value : [];
+        },
+    });

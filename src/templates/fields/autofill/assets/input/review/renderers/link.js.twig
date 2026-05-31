@@ -53,6 +53,13 @@
             toggleRow('link-preview-label-row', 'link-preview-label', config.label || '');
             toggleRow('link-preview-suffix-row', 'link-preview-suffix', config.urlSuffix || '');
 
+            const extras = host.querySelector('[data-autofill-review-input="link-preview-extras"]');
+            if (extras instanceof HTMLElement) {
+                const hasLabel = asString(config.label || '').trim() !== '';
+                const hasSuffix = asString(config.urlSuffix || '').trim() !== '';
+                extras.hidden = !hasLabel && !hasSuffix;
+            }
+
             const urlNode = host.querySelector('[data-autofill-review-input="link-preview-url"]');
             if (urlNode instanceof HTMLElement) {
                 const urlText = destinationUrl !== '' && destinationUrl !== destinationText ? destinationUrl : '';

@@ -14,6 +14,7 @@
 {% include 'autofill/fields/autofill/assets/input/review/renderers/date-time.js.twig' %}
 {% include 'autofill/fields/autofill/assets/input/review/renderers/lightswitch.js.twig' %}
 {% include 'autofill/fields/autofill/assets/input/review/renderers/scalar-fields.js.twig' %}
+{% include 'autofill/fields/autofill/assets/input/review/renderers/table.js.twig' %}
 
     const reviewRenderers = {
         textarea: createTextareaRenderer(),
@@ -32,6 +33,7 @@
         time: createTimeRenderer(),
         range: createRangeRenderer(),
         money: createMoneyRenderer(),
+        tablePreview: createTablePreviewRenderer(),
         lightswitch: createLightswitchRenderer(),
     };
 

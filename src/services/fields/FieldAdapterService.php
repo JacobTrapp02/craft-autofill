@@ -29,6 +29,7 @@ use jtdev\craftautofill\services\fields\adapters\PlainTextFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\RadioButtonsFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\RangeFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\SeomaticFieldAdapter;
+use jtdev\craftautofill\services\fields\adapters\TableFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\TagsFieldAdapter;
 use jtdev\craftautofill\services\fields\adapters\TimeFieldAdapter;
 
@@ -61,6 +62,7 @@ class FieldAdapterService extends Component
             $this->registerAdapter(new JsonFieldAdapter());
             $this->registerAdapter(new RangeFieldAdapter());
             $this->registerAdapter(new MoneyFieldAdapter());
+            $this->registerAdapter(new TableFieldAdapter());
             $this->registerAdapter(new EmailFieldAdapter());
             $this->registerAdapter(new AddressesFieldAdapter());
             $this->registerAdapter(new CategoriesFieldAdapter());

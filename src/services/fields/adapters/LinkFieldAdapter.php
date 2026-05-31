@@ -136,6 +136,7 @@ class LinkFieldAdapter implements FieldAdapterInterface
         }
 
         $rules[] = 'For text-style links, return the destination in the value field.';
+        $rules[] = 'Do not wrap link values in markdown, brackets, quotes, or prose.';
         $rules[] = 'For entry, category, and asset links, return the exact candidateKey and do not invent IDs.';
 
         if ($field->showLabelField) {
@@ -488,15 +489,19 @@ class LinkFieldAdapter implements FieldAdapterInterface
             'url' => [
                 'If you choose the url type, return the destination in value.',
                 'Return only a valid URL, root-relative URL, or anchor allowed by the field settings.',
+                'Do not return markdown links like [label](url) or partial bracketed URLs.',
             ],
             'email' => [
                 'If you choose the email type, return an email address or a mailto: link in value.',
+                'Do not wrap the value in markdown or quotes.',
             ],
             'tel' => [
                 'If you choose the tel type, return a phone number or tel: link in value.',
+                'Do not wrap the value in markdown or quotes.',
             ],
             'sms' => [
                 'If you choose the sms type, return a phone number or sms: link in value.',
+                'Do not wrap the value in markdown or quotes.',
             ],
             default => [
                 sprintf('If you choose the %s type, return its destination in value.', $linkType::displayName()),
@@ -986,11 +991,15 @@ class LinkFieldAdapter implements FieldAdapterInterface
             return trim((string)($matches[2] ?? ''));
         }
 
+        if (preg_match('/\]\(([^)]+)\)/', $trimmed, $matches) === 1) {
+            return $this->sanitizeLooseTextLinkValue((string)($matches[1] ?? ''));
+        }
+
         if (preg_match('/^<([^>]+)>$/', $trimmed, $matches) === 1) {
             return trim((string)($matches[1] ?? ''));
         }
 
-        return $trimmed;
+        return $this->sanitizeLooseTextLinkValue($trimmed);
     }
 
     private function normalizeRawTextLinkLabel(string $label, string $rawValue): string
@@ -1005,5 +1014,34 @@ class LinkFieldAdapter implements FieldAdapterInterface
         }
 
         return '';
+    }
+
+    private function sanitizeLooseTextLinkValue(string $value): string
+    {
+        $normalized = trim($value);
+        if ($normalized === '') {
+            return '';
+        }
+
+        $normalized = rawurldecode($normalized);
+        $normalized = trim($normalized, " \t\n\r\0\x0B\"'`<>[](){}");
+
+        if (preg_match('~(https?://[^\s"\'<>\])}]+)~i', $normalized, $matches) === 1) {
+            return rtrim(trim((string)($matches[1] ?? '')), '.,;:!?');
+        }
+
+        if (preg_match('~^(?:/[^"\'>\s]*)$~', $normalized) === 1) {
+            return $normalized;
+        }
+
+        if (preg_match('~^(?:#[^"\'>\s]+)$~', $normalized) === 1) {
+            return $normalized;
+        }
+
+        if (preg_match('~^(?:mailto:|tel:|sms:)[^"\'>\s]+$~i', $normalized) === 1) {
+            return $normalized;
+        }
+
+        return rtrim($normalized, '.,;:!?');
     }
 }

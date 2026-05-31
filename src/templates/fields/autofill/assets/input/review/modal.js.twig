@@ -38,12 +38,15 @@
             }
 
             const normalized = String(mode || '').trim().toLowerCase();
+            modalState.modal.classList.remove('autofill-review-modal--richtext', 'autofill-review-modal--table');
             if (normalized === 'richtext') {
                 modalState.modal.classList.add('autofill-review-modal--richtext');
                 return;
             }
 
-            modalState.modal.classList.remove('autofill-review-modal--richtext');
+            if (normalized === 'table') {
+                modalState.modal.classList.add('autofill-review-modal--table');
+            }
         };
 
         if (modalState.modal instanceof HTMLElement) {
@@ -192,7 +195,7 @@
             const displayMode = current?.reviewEditor?.displayMode || '';
             setModalDisplayMode(displayMode);
             modalState.status.textContent = `${currentIndex + 1} of ${suggestions.length}`;
-            modalState.field.textContent = current.fieldName || '(Unmatched field)';
+            modalState.field.textContent = current.displayFieldName || current.fieldName || '(Unmatched field)';
             if (modalState.errors instanceof HTMLElement) {
                 if (validationErrors.length) {
                     modalState.errors.textContent = validationErrors.join(' ');
@@ -246,10 +249,13 @@
                     return;
                 }
                 const current = suggestions[currentIndex];
-                current.value = runtime.readReviewEditorValue({
-                    suggestion: current,
-                    container: modalState.editor,
-                });
+                const editorType = String(current?.reviewEditor?.type || '').trim();
+                if (editorType !== 'tablePreview') {
+                    current.value = runtime.readReviewEditorValue({
+                        suggestion: current,
+                        container: modalState.editor,
+                    });
+                }
                 if (current.matchedHandle) {
                     try {
                         await applySuggestion({
