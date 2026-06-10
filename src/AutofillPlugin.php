@@ -12,6 +12,7 @@ use jtdev\craftautofill\models\Settings;
 use jtdev\craftautofill\services\ai\AiRequestLogService;
 use jtdev\craftautofill\services\ai\AiService;
 use jtdev\craftautofill\services\ai\providers\openai\OpenAiModelDiscoveryService;
+use jtdev\craftautofill\services\entries\BulkAutofillService;
 use jtdev\craftautofill\services\entries\EntrySuggestionApplyService;
 use jtdev\craftautofill\services\fields\FieldAdapterService;
 use jtdev\craftautofill\services\fields\FieldDiscoveryService;
@@ -24,6 +25,7 @@ use yii\base\Event;
  * @method Settings getSettings()
  * @method AiRequestLogService getAiRequestLogService()
  * @method AiService getAiService()
+ * @method BulkAutofillService getBulkAutofillService()
  * @method OpenAiModelDiscoveryService getOpenAiModelDiscoveryService()
  * @method EntrySuggestionApplyService getEntrySuggestionApplyService()
  * @method FieldAdapterService getFieldAdapterService()
@@ -34,8 +36,19 @@ use yii\base\Event;
  */
 class AutofillPlugin extends Plugin
 {
+    public const EDITION_FREE = 'free';
+    public const EDITION_PRO = 'pro';
+
     public string $schemaVersion = '1.0.0';
     public bool $hasCpSettings = true;
+
+    public static function editions(): array
+    {
+        return [
+            self::EDITION_FREE,
+            self::EDITION_PRO,
+        ];
+    }
 
     public static function config(): array
     {
@@ -43,6 +56,7 @@ class AutofillPlugin extends Plugin
             'components' => [
                 'aiRequestLogService' => AiRequestLogService::class,
                 'aiService' => AiService::class,
+                'bulkAutofillService' => BulkAutofillService::class,
                 'openAiModelDiscoveryService' => OpenAiModelDiscoveryService::class,
                 'entrySuggestionApplyService' => EntrySuggestionApplyService::class,
                 'fieldAdapterService' => FieldAdapterService::class,
@@ -94,6 +108,11 @@ class AutofillPlugin extends Plugin
         return $this->get('aiRequestLogService');
     }
 
+    public function getBulkAutofillService(): BulkAutofillService
+    {
+        return $this->get('bulkAutofillService');
+    }
+
     public function getOpenAiModelDiscoveryService(): OpenAiModelDiscoveryService
     {
         return $this->get('openAiModelDiscoveryService');
@@ -112,6 +131,11 @@ class AutofillPlugin extends Plugin
     public function getFieldDiscoveryService(): FieldDiscoveryService
     {
         return $this->get('fieldDiscoveryService');
+    }
+
+    public function isProEdition(): bool
+    {
+        return $this->is(self::EDITION_PRO);
     }
 
     private function attachEventHandlers(): void

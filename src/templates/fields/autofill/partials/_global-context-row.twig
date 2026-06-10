@@ -24,6 +24,7 @@
                                 <option
                                     value="{{ option.value }}"
                                     {% if option.fieldType is defined %}data-field-type="{{ option.fieldType }}"{% endif %}
+                                    {% if option.requiresPro ?? false %}data-requires-pro="1" class="autofill-pro-option"{% endif %}
                                     {% if option.value == (contextRow.fieldUid ?? '') %} selected{% endif %}
                                 >{{ option.label }}</option>
                             {% endfor %}

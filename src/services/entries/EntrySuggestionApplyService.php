@@ -37,6 +37,8 @@ class EntrySuggestionApplyService extends Component
         }
 
         $appliedValue = $rawValue;
+        $targetHandle = '';
+
         if (str_starts_with($targetFieldUid, '__native__:')) {
             $this->applyNativeFieldValue($entry, $targetFieldUid, $appliedValue);
         } else {
@@ -50,11 +52,19 @@ class EntrySuggestionApplyService extends Component
                 throw new RuntimeException(sprintf('No adapter available for field UID "%s".', $targetFieldUid));
             }
 
+            $targetHandle = (string)($field->handle ?? '');
             $appliedValue = $adapter->applySuggestionToEntry($field, $entry, $rawValue);
         }
 
         if (!Craft::$app->getElements()->saveElement($entry, false, false, false)) {
             $errors = $entry->getErrorSummary(true);
+            Craft::error(sprintf(
+                'Autofill entry suggestion save failed for entry %d and target "%s": %s',
+                $entryId,
+                $targetFieldUid,
+                $errors !== [] ? implode(' ', $errors) : 'Entry save failed while applying suggestion.'
+            ), __METHOD__);
+
             throw new RuntimeException($errors !== []
                 ? implode(' ', $errors)
                 : 'Entry save failed while applying suggestion.');

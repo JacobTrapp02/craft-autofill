@@ -3,12 +3,17 @@
 
 {% set supportedFieldOptions = [{ label: 'Select a field', value: '' }] %}
 {% set supportedFieldTypeMap = {} %}
+{% set supportedFieldRequiresProMap = {} %}
 {% for supportedField in supportedFields %}
     {% set fieldName = supportedField.name ?? '' %}
     {% set fieldHandle = supportedField.handle ?? '' %}
+    {% set requiresPro = not isProEdition and not (supportedField.availableInFreeVersion ?? false) %}
     {% set optionLabel = fieldName %}
     {% if fieldHandle != '' %}
         {% set optionLabel = fieldName ~ ' (' ~ fieldHandle ~ ')' %}
+    {% endif %}
+    {% if requiresPro %}
+        {% set optionLabel = optionLabel ~ ' - Pro' %}
     {% endif %}
 
     {% set supportedFieldOptions = supportedFieldOptions|merge([
@@ -16,10 +21,14 @@
             label: optionLabel,
             value: supportedField.uid,
             fieldType: supportedField.adapter,
+            requiresPro: requiresPro,
         }
     ]) %}
     {% set supportedFieldTypeMap = supportedFieldTypeMap|merge({
         (supportedField.uid): supportedField.adapter
+    }) %}
+    {% set supportedFieldRequiresProMap = supportedFieldRequiresProMap|merge({
+        (supportedField.uid): requiresPro
     }) %}
 {% endfor %}
 

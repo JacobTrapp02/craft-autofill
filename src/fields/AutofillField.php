@@ -76,6 +76,7 @@ class AutofillField extends Field
         $rules[] = [['rows', 'contextRows'], 'validateUniqueFieldSelections'];
         $rules[] = ['entryTypeUid', 'validateEntryTypeUid'];
         $rules[] = ['modelConfigUid', 'validateModelConfigUid'];
+        $rules[] = ['name', 'validateEditionFieldLimit'];
 
         return $rules;
     }
@@ -95,6 +96,7 @@ class AutofillField extends Field
             'supportedFields' => $supportedFields,
             'rows' => $this->rows,
             'contextRows' => $this->contextRows,
+            'isProEdition' => AutofillPlugin::getInstance()->isProEdition(),
         ]);
     }
 
@@ -118,13 +120,21 @@ class AutofillField extends Field
 
         foreach ($this->rows as $index => $row) {
             $rowNumber = $index + 1;
+            $targetFieldUid = (string)($row['targetFieldUid'] ?? '');
 
-            if ((string)($row['targetFieldUid'] ?? '') === '') {
+            if ($targetFieldUid === '') {
                 $this->addError('rows', sprintf('Row %d must select a target field.', $rowNumber));
             }
 
             if ((string)($row['prompt'] ?? '') === '') {
                 $this->addError('rows', sprintf('Row %d must include a prompt.', $rowNumber));
+            }
+
+            if ($this->shouldBlockProOnlyFieldUid($targetFieldUid)) {
+                $this->addError('rows', sprintf(
+                    'Row %d targets a field type that requires Autofill Pro.',
+                    $rowNumber
+                ));
             }
         }
     }
@@ -137,6 +147,13 @@ class AutofillField extends Field
             $rowNumber = $index + 1;
             if ($row['fieldUid'] === '') {
                 $this->addError('contextRows', sprintf('Context row %d must select a field.', $rowNumber));
+            }
+
+            if ($this->shouldBlockProOnlyFieldUid($row['fieldUid'])) {
+                $this->addError('contextRows', sprintf(
+                    'Context row %d uses a field type that requires Autofill Pro.',
+                    $rowNumber
+                ));
             }
         }
     }
@@ -215,6 +232,20 @@ class AutofillField extends Field
         }
 
         $this->addError('modelConfigUid', 'Selected model config no longer exists.');
+    }
+
+    public function validateEditionFieldLimit(): void
+    {
+        if (AutofillPlugin::getInstance()->isProEdition() || !$this->getIsNew()) {
+            return;
+        }
+
+        foreach (Craft::$app->getFields()->getAllFields() as $field) {
+            if ($field instanceof self) {
+                $this->addError('name', 'Autofill Free supports one Autofill field. Upgrade to Autofill Pro to add more.');
+                return;
+            }
+        }
     }
 
     /**
@@ -482,5 +513,56 @@ class AutofillField extends Field
         }
 
         return $supportedFields;
+    }
+
+    private function shouldBlockProOnlyFieldUid(string $fieldUid): bool
+    {
+        if ($fieldUid === '' || AutofillPlugin::getInstance()->isProEdition()) {
+            return false;
+        }
+
+        return !$this->isFieldUidAvailableInFreeVersion($fieldUid)
+            && !$this->fieldUidWasAlreadySelected($fieldUid);
+    }
+
+    private function isFieldUidAvailableInFreeVersion(string $fieldUid): bool
+    {
+        if (str_starts_with($fieldUid, '__native__:')) {
+            return true;
+        }
+
+        $field = Craft::$app->getFields()->getFieldByUid($fieldUid);
+        if (!$field instanceof FieldInterface) {
+            return true;
+        }
+
+        $adapter = AutofillPlugin::getInstance()->getFieldAdapterService()->getAdapterForField($field);
+        if ($adapter === null) {
+            return true;
+        }
+
+        return $adapter->isAvailableInFreeVersion();
+    }
+
+    private function fieldUidWasAlreadySelected(string $fieldUid): bool
+    {
+        $oldSettings = $this->oldSettings ?? null;
+        if (!is_array($oldSettings)) {
+            return false;
+        }
+
+        foreach (($oldSettings['rows'] ?? []) as $row) {
+            if (is_array($row) && (string)($row['targetFieldUid'] ?? '') === $fieldUid) {
+                return true;
+            }
+        }
+
+        foreach (($oldSettings['contextRows'] ?? []) as $row) {
+            if (is_array($row) && (string)($row['fieldUid'] ?? '') === $fieldUid) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

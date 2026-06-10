@@ -20,7 +20,7 @@ class TableFieldAdapter implements FieldAdapterInterface
 
     public function isAvailableInFreeVersion(): bool
     {
-        return true;
+        return false;
     }
 
     public function supports(FieldInterface $field): bool

@@ -14,6 +14,7 @@
     }
 
     const fieldTypeByUid = {{ supportedFieldTypeMap|json_encode|raw }};
+    const fieldRequiresProByUid = {{ supportedFieldRequiresProMap|json_encode|raw }};
     const hasSelectize = !!(window.jQuery && window.jQuery.fn && window.jQuery.fn.selectize);
 
     const formatFieldType = (raw) => {
@@ -38,12 +39,21 @@
             : null;
         const optionFieldType = selectedOption?.dataset?.fieldType || '';
         const fieldType = formatFieldType(fieldTypeByUid[select.value] || optionFieldType);
+        const requiresPro = !!fieldRequiresProByUid[select.value] || selectedOption?.dataset?.requiresPro === '1';
 
         if (!select.value) {
             meta.textContent = '';
+            meta.classList.remove('autofill-upgrade-message');
             return;
         }
 
+        if (requiresPro) {
+            meta.textContent = 'Upgrade to Pro to get access to this field type.';
+            meta.classList.add('autofill-upgrade-message');
+            return;
+        }
+
+        meta.classList.remove('autofill-upgrade-message');
         meta.textContent = fieldType ? `${labelPrefix}${fieldType}` : '';
     };
 
@@ -178,6 +188,18 @@
                 closeAfterSelect: true,
                 allowEmptyOption: true,
                 showEmptyOptionInDropdown: true,
+                render: {
+                    option(data, escape) {
+                        const requiresPro = !!fieldRequiresProByUid[data.value];
+                        const className = requiresPro ? 'option autofill-pro-option' : 'option';
+                        return `<div class="${className}">${escape(data.text)}</div>`;
+                    },
+                    item(data, escape) {
+                        const requiresPro = !!fieldRequiresProByUid[data.value];
+                        const className = requiresPro ? 'item autofill-pro-option' : 'item';
+                        return `<div class="${className}">${escape(data.text)}</div>`;
+                    },
+                },
                 ...config,
             });
         });

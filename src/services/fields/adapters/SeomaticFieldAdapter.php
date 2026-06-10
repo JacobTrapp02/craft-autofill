@@ -154,14 +154,7 @@ class SeomaticFieldAdapter implements FieldAdapterInterface
             throw new RuntimeException('Could not resolve field handle for SEOmatic suggestion apply.');
         }
 
-        $currentValue = $entry->getFieldValue($handle);
-        if (is_object($currentValue)) {
-            $updatedObject = $this->applyPatchToSeomaticObject($currentValue, $patch);
-            $entry->setFieldValue($handle, $updatedObject);
-            return $patch;
-        }
-
-        $base = $this->toArray($currentValue);
+        $base = $this->toArray($entry->getFieldValue($handle));
         $merged = $this->mergeSeoPatch($base, $patch);
 
         $entry->setFieldValue($handle, $merged);
@@ -203,33 +196,6 @@ class SeomaticFieldAdapter implements FieldAdapterInterface
             $normalized[$key] = $value;
         }
 
-        foreach (self::SUPPORTED_SOURCE_KEYS as $key) {
-            if (!array_key_exists($key, $flat)) {
-                continue;
-            }
-
-            $value = trim((string)$flat[$key]);
-            if ($value === '') {
-                continue;
-            }
-
-            $normalized[$key] = $value;
-        }
-
-        // Source selection is automatic for supported fields: if a value is set, source is custom.
-        if (($normalized['seoTitle'] ?? '') !== '') {
-            $normalized['seoTitleSource'] = 'custom';
-        }
-        if (($normalized['siteNamePosition'] ?? '') !== '') {
-            $normalized['siteNamePositionSource'] = 'custom';
-        }
-        if (($normalized['seoDescription'] ?? '') !== '') {
-            $normalized['seoDescriptionSource'] = 'custom';
-        }
-        if (($normalized['seoKeywords'] ?? '') !== '') {
-            $normalized['seoKeywordsSource'] = 'custom';
-        }
-
         return $normalized;
     }
 
@@ -243,6 +209,11 @@ class SeomaticFieldAdapter implements FieldAdapterInterface
         if (!isset($base['metaGlobalVars']) || !is_array($base['metaGlobalVars'])) {
             $base['metaGlobalVars'] = [];
         }
+
+        $base['metaGlobalVars'] = array_intersect_key(
+            $base['metaGlobalVars'],
+            array_flip(self::SAFE_META_GLOBAL_KEYS)
+        );
 
         $assignableMetaGlobalKeys = $this->resolveAssignableMetaGlobalKeys($base);
 
@@ -264,69 +235,6 @@ class SeomaticFieldAdapter implements FieldAdapterInterface
         }
 
         return $base;
-    }
-
-    private function applyPatchToSeomaticObject(object $value, array $patch): object
-    {
-        $metaGlobalVars = $this->readProperty($value, 'metaGlobalVars');
-
-        foreach ($patch as $key => $fieldValue) {
-            if (!is_string($fieldValue) || $fieldValue === '') {
-                continue;
-            }
-
-            if (in_array($key, self::SAFE_META_GLOBAL_KEYS, true)) {
-                if (is_object($metaGlobalVars)) {
-                    $this->assignObjectPropertyIfSupported($metaGlobalVars, $key, $fieldValue);
-                    continue;
-                }
-
-                if (is_array($metaGlobalVars)) {
-                    $metaGlobalVars[$key] = $fieldValue;
-                    continue;
-                }
-            }
-
-            // Source fields are not part of MetaGlobalVars; only set them if root object supports it.
-            $this->assignObjectPropertyIfSupported($value, $key, $fieldValue);
-        }
-
-        if (is_array($metaGlobalVars)) {
-            $this->assignObjectPropertyIfSupported($value, 'metaGlobalVars', $metaGlobalVars);
-        }
-
-        return $value;
-    }
-
-    private function readProperty(object $value, string $property): mixed
-    {
-        if (property_exists($value, $property)) {
-            return $value->{$property};
-        }
-
-        try {
-            return $value->{$property};
-        } catch (\Throwable) {
-            return null;
-        }
-    }
-
-    private function assignObjectPropertyIfSupported(object $target, string $key, mixed $value): void
-    {
-        if (method_exists($target, 'canSetProperty') && $target->canSetProperty($key)) {
-            $target->{$key} = $value;
-            return;
-        }
-
-        if (!property_exists($target, $key)) {
-            return;
-        }
-
-        try {
-            $target->{$key} = $value;
-        } catch (\Throwable) {
-            // Ignore unsupported assignment attempts.
-        }
     }
 
     /**
@@ -380,24 +288,7 @@ class SeomaticFieldAdapter implements FieldAdapterInterface
      */
     private function resolveAssignableMetaGlobalKeys(array $base): array
     {
-        $keys = self::SAFE_META_GLOBAL_KEYS;
-
-        $metaGlobalVars = $base['metaGlobalVars'] ?? null;
-        if (!is_array($metaGlobalVars)) {
-            return $keys;
-        }
-
-        foreach (array_keys($metaGlobalVars) as $existingKey) {
-            if (!is_string($existingKey) || $existingKey === '') {
-                continue;
-            }
-
-            if (!in_array($existingKey, $keys, true)) {
-                $keys[] = $existingKey;
-            }
-        }
-
-        return $keys;
+        return self::SAFE_META_GLOBAL_KEYS;
     }
 
     /**
@@ -425,7 +316,7 @@ class SeomaticFieldAdapter implements FieldAdapterInterface
     private function toArray(mixed $value): array
     {
         if (is_array($value)) {
-            return $value;
+            return $this->normalizeArrayValue($value);
         }
 
         if (is_string($value)) {
@@ -435,7 +326,7 @@ class SeomaticFieldAdapter implements FieldAdapterInterface
             }
 
             $decoded = json_decode($trimmed, true);
-            return is_array($decoded) ? $decoded : [];
+            return is_array($decoded) ? $this->normalizeArrayValue($decoded) : [];
         }
 
         if ($value instanceof \JsonSerializable) {
@@ -445,13 +336,13 @@ class SeomaticFieldAdapter implements FieldAdapterInterface
                 return [];
             }
 
-            return is_array($serialized) ? $serialized : [];
+            return is_array($serialized) ? $this->normalizeArrayValue($serialized) : [];
         }
 
         if (is_object($value)) {
             $props = get_object_vars($value);
             if (is_array($props) && $props !== []) {
-                return $props;
+                return $this->normalizeArrayValue($props);
             }
 
             foreach (['toArray', 'getAttributes'] as $method) {
@@ -466,11 +357,30 @@ class SeomaticFieldAdapter implements FieldAdapterInterface
                 }
 
                 if (is_array($candidate)) {
-                    return $candidate;
+                    return $this->normalizeArrayValue($candidate);
                 }
             }
         }
 
         return [];
+    }
+
+    /**
+     * @param array<string|int, mixed> $value
+     * @return array<string, mixed>
+     */
+    private function normalizeArrayValue(array $value): array
+    {
+        $normalized = [];
+
+        foreach ($value as $key => $item) {
+            $normalized[(string)$key] = match (true) {
+                is_array($item) => $this->normalizeArrayValue($item),
+                is_object($item) => $this->toArray($item),
+                default => $item,
+            };
+        }
+
+        return $normalized;
     }
 }

@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace jtdev\craftautofill\services\fields\adapters;
 
 use Craft;
-use craft\base\FieldInterface;
 use craft\base\ElementInterface;
+use craft\base\FieldInterface;
+use craft\db\Table;
 use craft\elements\Entry;
 use craft\fields\BaseRelationField;
-use craft\db\Table;
 use yii\base\InvalidConfigException;
 
 abstract class AbstractRelatedElementsFieldAdapter implements FieldAdapterInterface
@@ -18,7 +18,7 @@ abstract class AbstractRelatedElementsFieldAdapter implements FieldAdapterInterf
 
     public function isAvailableInFreeVersion(): bool
     {
-        return true;
+        return false;
     }
 
     public function getPromptConfigSchema(FieldInterface $field): array
