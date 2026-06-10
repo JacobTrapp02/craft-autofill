@@ -1,8 +1,5 @@
 {# @var plugin \jtdev\craftautofill\AutofillPlugin #}
 {# @var settings \jtdev\craftautofill\models\Settings #}
-{# @var openAiModelOptions array<int, array{label:string, value:string}>|null #}
-{# @var openAiModelDiscoveryError string|null #}
-{# @var openAiModelDiscoverySourceEnv string|null #}
 
 {% import '_includes/forms.twig' as forms %}
 
@@ -17,55 +14,40 @@
     { label: 'High', value: 'high' },
 ] %}
 
-{% set openAiModelOptions = openAiModelOptions ?? [] %}
-{% set hasModelOptions = openAiModelOptions|length > 1 %}
+{% set envSuggestions = plugin.getEnvSuggestionsForAutosuggest() %}
 
 {% set modelConfigRows = {} %}
 {% for config in settings.modelConfigs %}
     {% set rowId = config.uid ?? ('row-' ~ loop.index) %}
-    {% set rowModelId = config.modelId ?? '' %}
-    {% set rowModelIdOptions = openAiModelOptions %}
-    {% if hasModelOptions and rowModelId != '' %}
-        {% set hasCurrentModel = false %}
-        {% for option in rowModelIdOptions %}
-            {% if option.value == rowModelId %}
-                {% set hasCurrentModel = true %}
-            {% endif %}
-        {% endfor %}
-        {% if not hasCurrentModel %}
-            {% set rowModelIdOptions = rowModelIdOptions|merge([
-                { label: rowModelId ~ ' (saved)', value: rowModelId }
-            ]) %}
-        {% endif %}
-    {% endif %}
-
     {% set modelConfigRows = modelConfigRows|merge({
         (rowId): {
             uid: config.uid ?? '',
             label: config.label ?? '',
             provider: config.provider ?? 'openai',
             apiKeyEnv: config.apiKeyEnv ?? '',
-            modelId: hasModelOptions ? {
-                value: rowModelId,
-                options: rowModelIdOptions,
-            } : rowModelId,
+            modelId: config.modelId ?? '',
             reasoningEffort: config.reasoningEffort ?? '',
             enabled: config.enabled ?? true,
         }
     }) %}
 {% endfor %}
-
-{{ forms.lightswitchField({
-    label: 'Enable Test Mode',
-    instructions: 'When enabled, editors can preview prompts and manually paste model responses for low-cost testing. When disabled, the Autofill button sends live AI requests directly.',
-    id: 'testMode',
-    name: 'testMode',
-    on: settings.testMode ?? true,
-}) }}
+{% if modelConfigRows is empty %}
+    {% set modelConfigRows = {
+        new1: {
+            uid: '',
+            label: '',
+            provider: 'openai',
+            apiKeyEnv: '',
+            modelId: '',
+            reasoningEffort: '',
+            enabled: true,
+        }
+    } %}
+{% endif %}
 
 {{ forms.editableTableField({
     label: 'AI Model Configurations',
-    instructions: 'Add one or more model configs. Store API keys as env var references like `$OPENAI_API_KEY`. The first enabled row is treated as the default.',
+    instructions: 'Add one or more model configs. Store API keys as env var references like `$OPENAI_API_KEY`. The first enabled row is treated as the default. See OpenAI model docs for current model IDs.',
     id: 'modelConfigs',
     name: 'modelConfigs',
     cols: {
@@ -89,14 +71,14 @@
         apiKeyEnv: {
             type: 'autosuggest',
             heading: 'API Key Env',
+            suggestions: envSuggestions,
             suggestEnvVars: true,
             placeholder: '$OPENAI_API_KEY',
         },
         modelId: {
-            type: hasModelOptions ? 'select' : 'singleline',
+            type: 'singleline',
             heading: 'Model ID',
-            placeholder: hasModelOptions ? null : 'gpt-4.1-mini',
-            options: hasModelOptions ? openAiModelOptions : null,
+            placeholder: 'gpt-4.1-mini',
         },
         reasoningEffort: {
             type: 'select',
@@ -114,20 +96,66 @@
     allowAdd: true,
     allowDelete: true,
     allowReorder: true,
+    defaultValues: {
+        provider: 'openai',
+        apiKeyEnv: '$OPENAI_API_KEY',
+        enabled: true,
+    },
     fullWidth: true,
     errors: settings.getErrors('modelConfigs')|unique,
 }) }}
 
-{% if openAiModelDiscoveryError %}
-    <p class="warning has-icon" style="margin-top: 10px;">
-        {{ openAiModelDiscoveryError }}
-    </p>
-{% elseif hasModelOptions %}
-    <p class="light" style="margin-top: 10px;">
-        Loaded {{ openAiModelOptions|length - 1 }} OpenAI models using {{ openAiModelDiscoverySourceEnv ?: 'configured API key env' }}.
-    </p>
-{% else %}
-    <p class="light" style="margin-top: 10px;">
-        OpenAI model list unavailable. You can still enter Model IDs manually.
-    </p>
-{% endif %}
+<datalist id="{{ 'autofill-env-suggestions'|namespaceInputId }}">
+    {% for section in envSuggestions %}
+        {% for suggestion in section.data ?? [] %}
+            <option value="{{ suggestion.name }}">{{ suggestion.hint ?? '' }}</option>
+        {% endfor %}
+    {% endfor %}
+</datalist>
+
+{% js %}
+(() => {
+    const table = document.getElementById('{{ 'modelConfigs'|namespaceInputId|e('js') }}');
+    const datalistId = '{{ 'autofill-env-suggestions'|namespaceInputId|e('js') }}';
+
+    if (!table) {
+        return;
+    }
+
+    const repairAddedApiKeyInputs = () => {
+        table.querySelectorAll('textarea[name$="[apiKeyEnv]"]').forEach((textarea) => {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'text fullwidth';
+            input.name = textarea.name;
+            input.value = textarea.value;
+            input.placeholder = '$OPENAI_API_KEY';
+            input.setAttribute('list', datalistId);
+            textarea.replaceWith(input);
+        });
+    };
+
+    repairAddedApiKeyInputs();
+
+    const editableTable = window.jQuery ? window.jQuery(table).data('editable-table') : null;
+    if (editableTable && typeof editableTable.on === 'function') {
+        editableTable.on('addRow', repairAddedApiKeyInputs);
+    }
+
+    table.parentElement?.querySelector('.add')?.addEventListener('click', () => {
+        window.setTimeout(repairAddedApiKeyInputs, 0);
+    });
+})();
+{% endjs %}
+
+<p class="light" style="margin-top: 10px;">
+    Current model IDs are listed in the <a href="https://developers.openai.com/api/docs/models/compare" rel="noopener" target="_blank">OpenAI model comparison table</a>.
+</p>
+
+{{ forms.lightswitchField({
+    label: 'Enable Test Mode',
+    instructions: 'When enabled, editors can preview prompts and manually paste model responses for low-cost testing. When disabled, the Autofill button sends live AI requests directly.',
+    id: 'testMode',
+    name: 'testMode',
+    on: settings.testMode ?? true,
+}) }}

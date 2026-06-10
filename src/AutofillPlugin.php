@@ -6,12 +6,12 @@ use Craft;
 use craft\base\Model;
 use craft\base\Plugin;
 use craft\events\RegisterComponentTypesEvent;
+use craft\helpers\App;
 use craft\services\Fields;
 use jtdev\craftautofill\fields\AutofillField;
 use jtdev\craftautofill\models\Settings;
 use jtdev\craftautofill\services\ai\AiRequestLogService;
 use jtdev\craftautofill\services\ai\AiService;
-use jtdev\craftautofill\services\ai\providers\openai\OpenAiModelDiscoveryService;
 use jtdev\craftautofill\services\entries\BulkAutofillService;
 use jtdev\craftautofill\services\entries\EntrySuggestionApplyService;
 use jtdev\craftautofill\services\fields\FieldAdapterService;
@@ -26,7 +26,6 @@ use yii\base\Event;
  * @method AiRequestLogService getAiRequestLogService()
  * @method AiService getAiService()
  * @method BulkAutofillService getBulkAutofillService()
- * @method OpenAiModelDiscoveryService getOpenAiModelDiscoveryService()
  * @method EntrySuggestionApplyService getEntrySuggestionApplyService()
  * @method FieldAdapterService getFieldAdapterService()
  * @method FieldDiscoveryService getFieldDiscoveryService()
@@ -57,7 +56,6 @@ class AutofillPlugin extends Plugin
                 'aiRequestLogService' => AiRequestLogService::class,
                 'aiService' => AiService::class,
                 'bulkAutofillService' => BulkAutofillService::class,
-                'openAiModelDiscoveryService' => OpenAiModelDiscoveryService::class,
                 'entrySuggestionApplyService' => EntrySuggestionApplyService::class,
                 'fieldAdapterService' => FieldAdapterService::class,
                 'fieldDiscoveryService' => FieldDiscoveryService::class,
@@ -87,14 +85,10 @@ class AutofillPlugin extends Plugin
     {
         $this->hydrateServerEnvKeysForAutosuggest();
         $settings = $this->getSettings();
-        $modelDiscovery = $this->getOpenAiModelDiscoveryService()->discoverForSettings($settings);
 
         return Craft::$app->view->renderTemplate('autofill/_settings.twig', [
             'plugin' => $this,
             'settings' => $settings,
-            'openAiModelOptions' => $modelDiscovery['options'],
-            'openAiModelDiscoveryError' => $modelDiscovery['error'],
-            'openAiModelDiscoverySourceEnv' => $modelDiscovery['sourceEnv'],
         ]);
     }
 
@@ -111,11 +105,6 @@ class AutofillPlugin extends Plugin
     public function getBulkAutofillService(): BulkAutofillService
     {
         return $this->get('bulkAutofillService');
-    }
-
-    public function getOpenAiModelDiscoveryService(): OpenAiModelDiscoveryService
-    {
-        return $this->get('openAiModelDiscoveryService');
     }
 
     public function getFieldAdapterService(): FieldAdapterService
@@ -136,6 +125,42 @@ class AutofillPlugin extends Plugin
     public function isProEdition(): bool
     {
         return $this->is(self::EDITION_PRO);
+    }
+
+    /**
+     * @return array<int, array{label:string,data:array<int, array{name:string,hint:string}>}>
+     */
+    public function getEnvSuggestionsForAutosuggest(): array
+    {
+        $this->hydrateServerEnvKeysForAutosuggest();
+
+        $security = Craft::$app->getSecurity();
+        $suggestions = [];
+
+        foreach (array_keys($_SERVER) as $key) {
+            if (!is_string($key) || $key === '' || str_starts_with($key, 'HTTP_')) {
+                continue;
+            }
+
+            $value = App::env($key);
+            if (!is_scalar($value)) {
+                continue;
+            }
+
+            $suggestions[$key] = [
+                'name' => '$' . $key,
+                'hint' => $security->redactIfSensitive($key, Craft::getAlias((string)$value, false)),
+            ];
+        }
+
+        ksort($suggestions, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return [
+            [
+                'label' => Craft::t('app', 'Environment Variables'),
+                'data' => array_values($suggestions),
+            ],
+        ];
     }
 
     private function attachEventHandlers(): void
