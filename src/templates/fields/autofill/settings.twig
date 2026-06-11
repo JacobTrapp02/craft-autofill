@@ -1,6 +1,41 @@
 {% import '_includes/forms.twig' as forms %}
 {% do view.registerAssetBundle('craft\\web\\assets\\selectize\\SelectizeAsset') %}
 
+{% set docsBaseUrl = 'https://www.jtdevelop.com/development/plugins/autofill' %}
+{% set autofillFieldsDocsUrl = docsBaseUrl ~ '/autofill-fields' %}
+{% set entryTypeScopeDocsUrl = autofillFieldsDocsUrl ~ '#entry-type-scope' %}
+{% set modelAndEditorDocsUrl = autofillFieldsDocsUrl ~ '#model-and-editor-controls' %}
+{% set generationRowsDocsUrl = autofillFieldsDocsUrl ~ '#generation-rows' %}
+{% set globalContextDocsUrl = autofillFieldsDocsUrl ~ '#global-context' %}
+{% set advancedRowSettingsDocsUrl = autofillFieldsDocsUrl ~ '#advanced-row-settings' %}
+{% set editorWorkflowDocsUrl = docsBaseUrl ~ '/editor-workflow' %}
+{% set supportedFieldsDocsUrl = docsBaseUrl ~ '/supported-fields' %}
+
+{% set entryTypeScopeHelpTip %}
+    {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+        tooltipHtml: 'This scope controls which fields appear in row dropdowns and where this Autofill profile should be reused. <a href="' ~ entryTypeScopeDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+        tooltipText: 'This scope controls which fields appear in row dropdowns and where this Autofill profile should be reused. Learn more in the entry type scope docs.'
+    } only %}
+{% endset %}
+{% set modelConfigHelpTip %}
+    {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+        tooltipHtml: 'If empty, the first enabled model config in plugin settings is used. Set this when this field needs a specific model. <a href="' ~ modelAndEditorDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+        tooltipText: 'If empty, the first enabled model config in plugin settings is used. Set this when this field needs a specific model. Learn more in the model and editor controls docs.'
+    } only %}
+{% endset %}
+{% set showPromptInputHelpTip %}
+    {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+        tooltipHtml: 'Turn this off to simplify the editor experience when prompts should be fully controlled by field config only. <a href="' ~ editorWorkflowDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+        tooltipText: 'Turn this off to simplify the editor experience when prompts should be fully controlled by field config only. Learn more in the editor workflow docs.'
+    } only %}
+{% endset %}
+{% set actionButtonLabelHelpTip %}
+    {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+        tooltipHtml: 'Leave blank to use the default label: <code>Generate</code> in Test Mode, <code>Autofill</code> in Live Mode. <a href="' ~ modelAndEditorDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+        tooltipText: 'Leave blank to use the default label: Generate in Test Mode, Autofill in Live Mode. Learn more in the model and editor controls docs.'
+    } only %}
+{% endset %}
+
 {% set supportedFieldOptions = [{ label: 'Select a field', value: '' }] %}
 {% set supportedFieldTypeMap = {} %}
 {% set supportedFieldRequiresProMap = {} %}
@@ -44,8 +79,7 @@
 {% set uiContextRows = contextRows is not empty ? contextRows : [] %}
 
 {{ forms.selectField({
-    label: 'Entry Type Scope',
-    tip: 'This scope controls which fields appear in row dropdowns and where this Autofill profile should be reused.',
+    label: 'Entry Type Scope ' ~ entryTypeScopeHelpTip,
     id: 'entryTypeUid',
     name: 'entryTypeUid',
     options: entryTypeOptions,
@@ -54,8 +88,7 @@
 }) }}
 
 {{ forms.selectField({
-    label: 'Model Config',
-    tip: 'If empty, the first enabled model config in plugin settings is used. Set this when this field needs a specific model.',
+    label: 'Model Config ' ~ modelConfigHelpTip,
     id: 'modelConfigUid',
     name: 'modelConfigUid',
     options: modelConfigOptions,
@@ -64,8 +97,7 @@
 }) }}
 
 {{ forms.lightswitchField({
-    label: 'Show Prompt Input Box',
-    tip: 'Turn this off to simplify the editor experience when prompts should be fully controlled by field config only.',
+    label: 'Show Prompt Input Box ' ~ showPromptInputHelpTip,
     id: 'showUserPromptInput',
     name: 'showUserPromptInput',
     on: field.showUserPromptInput ?? true,
@@ -73,8 +105,7 @@
 }) }}
 
 {{ forms.textField({
-    label: 'Action Button Label',
-    tip: 'Leave blank to use the default label (`Generate` in Test Mode, `Autofill` in Live Mode).',
+    label: 'Action Button Label ' ~ actionButtonLabelHelpTip,
     id: 'actionButtonLabel',
     name: 'actionButtonLabel',
     value: field.actionButtonLabel,
@@ -87,6 +118,9 @@
     uiRows: uiRows,
     supportedFieldOptions: supportedFieldOptions,
     rowErrors: rowErrors,
+    generationRowsDocsUrl: generationRowsDocsUrl,
+    supportedFieldsDocsUrl: supportedFieldsDocsUrl,
+    advancedRowSettingsDocsUrl: advancedRowSettingsDocsUrl,
 } only %}
 
 {% set contextRowErrors = field.getErrors('contextRows') %}
@@ -97,6 +131,8 @@
     globalPrompt: field.globalPrompt,
     globalPromptErrors: globalPromptErrors,
     contextRowErrors: contextRowErrors,
+    globalContextDocsUrl: globalContextDocsUrl,
+    supportedFieldsDocsUrl: supportedFieldsDocsUrl,
 } only %}
 
 {% css %}

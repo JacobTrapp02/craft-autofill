@@ -3,6 +3,28 @@
 
 {% import '_includes/forms.twig' as forms %}
 
+{% set docsBaseUrl = 'https://www.jtdevelop.com/development/plugins/autofill' %}
+{% set gettingStartedDocsUrl = docsBaseUrl ~ '/overview-and-getting-started' %}
+{% set aiModelDocsUrl = docsBaseUrl ~ '/ai-model-configuration' %}
+{% set testModeDocsUrl = docsBaseUrl ~ '/test-mode' %}
+
+{% set aiModelHelpTip %}
+    {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+        tooltipHtml: 'Add one or more model configs. Store API keys as env var references like <code>$OPENAI_API_KEY</code>. The first enabled row is treated as the default. See the <a href="' ~ aiModelDocsUrl ~ '" target="_blank" rel="noopener">AI model configuration docs</a> for provider, API key, model ID, and reasoning guidance.',
+        tooltipText: 'Add one or more model configs. Store API keys as env var references. The first enabled row is treated as the default. See the AI model configuration docs for provider, API key, model ID, and reasoning guidance.'
+    } only %}
+{% endset %}
+{% set testModeHelpTip %}
+    {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+        tooltipHtml: 'When enabled, editors can preview prompts and manually paste model responses for low-cost testing. When disabled, the Autofill button sends live AI requests directly. See the <a href="' ~ testModeDocsUrl ~ '" target="_blank" rel="noopener">test mode docs</a> for prompt previews, response inspection, and debugging model output.',
+        tooltipText: 'When enabled, editors can preview prompts and manually paste model responses for low-cost testing. When disabled, the Autofill button sends live AI requests directly. See the test mode docs for prompt previews, response inspection, and debugging model output.'
+    } only %}
+{% endset %}
+
+<p class="light">
+    New to Autofill? Start with the <a href="{{ gettingStartedDocsUrl }}" target="_blank" rel="noopener">overview and getting started guide</a> to get a handle on the setup flow.
+</p>
+
 {% set providerOptions = [
     { label: 'OpenAI', value: 'openai' },
 ] %}
@@ -46,8 +68,7 @@
 {% endif %}
 
 {{ forms.editableTableField({
-    label: 'AI Model Configurations',
-    instructions: 'Add one or more model configs. Store API keys as env var references like `$OPENAI_API_KEY`. The first enabled row is treated as the default. See OpenAI model docs for current model IDs.',
+    label: 'AI Model Configurations ' ~ aiModelHelpTip,
     id: 'modelConfigs',
     name: 'modelConfigs',
     cols: {
@@ -153,9 +174,12 @@
 </p>
 
 {{ forms.lightswitchField({
-    label: 'Enable Test Mode',
-    instructions: 'When enabled, editors can preview prompts and manually paste model responses for low-cost testing. When disabled, the Autofill button sends live AI requests directly.',
+    label: 'Enable Test Mode ' ~ testModeHelpTip,
     id: 'testMode',
     name: 'testMode',
     on: settings.testMode ?? true,
 }) }}
+
+{% css %}
+{% include 'autofill/fields/autofill/assets/settings/index.css.twig' %}
+{% endcss %}

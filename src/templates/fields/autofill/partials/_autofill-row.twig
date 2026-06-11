@@ -1,3 +1,7 @@
+{% set generationRowsDocsUrl = generationRowsDocsUrl ?? 'https://www.jtdevelop.com/development/plugins/autofill/autofill-fields#generation-rows' %}
+{% set supportedFieldsDocsUrl = supportedFieldsDocsUrl ?? 'https://www.jtdevelop.com/development/plugins/autofill/supported-fields' %}
+{% set advancedRowSettingsDocsUrl = advancedRowSettingsDocsUrl ?? 'https://www.jtdevelop.com/development/plugins/autofill/autofill-fields#advanced-row-settings' %}
+
 <div class="matrixblock" data-row role="listitem">
     <div class="titlebar">
         <div class="blocktype"><strong>Autofill Row</strong></div>
@@ -15,7 +19,8 @@
                     <label>
                         Target Field
                         {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                            tooltipText: 'Choose which entry field this row will update when suggestions are accepted.'
+                            tooltipHtml: 'Choose which entry field this row will update when suggestions are accepted. <a href="' ~ supportedFieldsDocsUrl ~ '" target="_blank" rel="noopener">See supported fields</a>.',
+                            tooltipText: 'Choose which entry field this row will update when suggestions are accepted. See the supported fields docs.'
                         } only %}
                     </label>
                 </div>
@@ -41,7 +46,8 @@
                     <label>
                         Prompt
                         {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                            tooltipText: 'This instruction is sent for this specific target field. Keep it direct and field-specific.'
+                            tooltipHtml: 'This instruction is sent for this specific target field. Keep it direct and field-specific. <a href="' ~ generationRowsDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+                            tooltipText: 'This instruction is sent for this specific target field. Keep it direct and field-specific. Learn more in the generation rows docs.'
                         } only %}
                     </label>
                 </div>
@@ -59,7 +65,8 @@
                         <label>
                             Behavior
                             {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                                tooltipText: 'These switches control review flow, whether current values are sent to the model, and whether this row is active.'
+                                tooltipHtml: 'These switches control review flow, whether current values are sent to the model, and whether this row is active. <a href="' ~ advancedRowSettingsDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+                                tooltipText: 'These switches control review flow, whether current values are sent to the model, and whether this row is active. Learn more in the advanced row settings docs.'
                             } only %}
                         </label>
                     </div>
@@ -69,7 +76,8 @@
                             <input type="checkbox" name="rows[{{ rowId }}][requiresApproval]" value="1"{% if row.requiresApproval ?? true %} checked{% endif %}>
                             Requires Editor Approval
                             {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                                tooltipText: 'When enabled, this suggestion is shown in the review modal before it can be applied.'
+                                tooltipHtml: 'When enabled, this suggestion is shown in the review modal before it can be applied. <a href="' ~ advancedRowSettingsDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+                                tooltipText: 'When enabled, this suggestion is shown in the review modal before it can be applied. Learn more in the advanced row settings docs.'
                             } only %}
                         </label>
                         <label class="checkbox-label">
@@ -77,7 +85,8 @@
                             <input type="checkbox" name="rows[{{ rowId }}][includeCurrentFieldValue]" value="1"{% if row.includeCurrentFieldValue ?? true %} checked{% endif %}>
                             Include Current Field Value In Prompt
                             {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                                tooltipText: 'Sends the field’s current value as context so AI can refine or preserve what is already there.'
+                                tooltipHtml: 'Sends the field current value as context so AI can refine or preserve what is already there. <a href="' ~ advancedRowSettingsDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+                                tooltipText: 'Sends the field current value as context so AI can refine or preserve what is already there. Learn more in the advanced row settings docs.'
                             } only %}
                         </label>
                         <label class="checkbox-label">
@@ -85,7 +94,8 @@
                             <input type="checkbox" name="rows[{{ rowId }}][overrideCurrentValue]" value="1"{% if row.overrideCurrentValue ?? true %} checked{% endif %}>
                             Override Current Value
                             {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                                tooltipText: 'If disabled and the field already has content, this row is skipped to avoid replacing existing values.'
+                                tooltipHtml: 'If disabled and the field already has content, this row is skipped to avoid replacing existing values. <a href="' ~ advancedRowSettingsDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+                                tooltipText: 'If disabled and the field already has content, this row is skipped to avoid replacing existing values. Learn more in the advanced row settings docs.'
                             } only %}
                         </label>
                         <label class="checkbox-label">
@@ -93,7 +103,8 @@
                             <input type="checkbox" name="rows[{{ rowId }}][enabled]" value="1"{% if row.enabled ?? true %} checked{% endif %}>
                             Row Enabled
                             {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                                tooltipText: 'Quickly disable a row without deleting its prompt and target field setup.'
+                                tooltipHtml: 'Quickly disable a row without deleting its prompt and target field setup. <a href="' ~ advancedRowSettingsDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+                                tooltipText: 'Quickly disable a row without deleting its prompt and target field setup. Learn more in the advanced row settings docs.'
                             } only %}
                         </label>
                     </div>
@@ -104,7 +115,8 @@
                         <label>
                             SEO Prompt Includes
                             {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                                tooltipText: 'Control which SEO properties are included in the AI contract for SEOmatic target fields.'
+                                tooltipHtml: 'Control which SEO properties are included in the AI contract for SEOmatic target fields. <a href="' ~ advancedRowSettingsDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+                                tooltipText: 'Control which SEO properties are included in the AI contract for SEOmatic target fields. Learn more in the advanced row settings docs.'
                             } only %}
                         </label>
                     </div>
@@ -137,7 +149,8 @@
                         <label>
                             Related Selection Scope
                             {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                                tooltipText: 'Choose whether AI sees all candidates or only a Top N shortlist. Top N keeps prompts smaller and faster.'
+                                tooltipHtml: 'Choose whether AI sees all candidates or only a Top N shortlist. Top N keeps prompts smaller and faster. <a href="' ~ advancedRowSettingsDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+                                tooltipText: 'Choose whether AI sees all candidates or only a Top N shortlist. Top N keeps prompts smaller and faster. Learn more in the advanced row settings docs.'
                             } only %}
                         </label>
                     </div>
@@ -179,7 +192,8 @@
                         <label>
                             Link Candidate Scope
                             {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                                tooltipText: 'Control how many entry, category, and asset candidates are sent to AI for Link fields. Text-based link types do not use these candidate lists.'
+                                tooltipHtml: 'Control how many entry, category, and asset candidates are sent to AI for Link fields. Text-based link types do not use these candidate lists. <a href="' ~ advancedRowSettingsDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+                                tooltipText: 'Control how many entry, category, and asset candidates are sent to AI for Link fields. Text-based link types do not use these candidate lists. Learn more in the advanced row settings docs.'
                             } only %}
                         </label>
                     </div>

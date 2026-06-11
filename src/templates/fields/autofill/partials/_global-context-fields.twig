@@ -1,9 +1,13 @@
+{% set globalContextDocsUrl = globalContextDocsUrl ?? 'https://www.jtdevelop.com/development/plugins/autofill/autofill-fields#global-context' %}
+{% set supportedFieldsDocsUrl = supportedFieldsDocsUrl ?? 'https://www.jtdevelop.com/development/plugins/autofill/supported-fields' %}
+
 <div class="field" data-autofill-context-settings-field>
     <div class="heading">
         <label>
             Global Context
             {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                tooltipText: 'Global context gives shared instructions and read-only reference fields that apply to all generation rows.'
+                tooltipHtml: 'Global context gives shared instructions and read-only reference fields that apply to all generation rows. <a href="' ~ globalContextDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+                tooltipText: 'Global context gives shared instructions and read-only reference fields that apply to all generation rows. Learn more in the global context docs.'
             } only %}
         </label>
     </div>
@@ -13,7 +17,8 @@
             <label for="globalPrompt">
                 Global Prompt
                 {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                    tooltipText: 'Use this for shared constraints like tone, brand, quality rules, or compliance guidance.'
+                    tooltipHtml: 'Use this for shared constraints like tone, brand, quality rules, or compliance guidance. <a href="' ~ globalContextDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+                    tooltipText: 'Use this for shared constraints like tone, brand, quality rules, or compliance guidance. Learn more in the global context docs.'
                 } only %}
             </label>
         </div>
@@ -45,6 +50,8 @@
                     contextRowId: 'context-row-' ~ loop.index0,
                     supportedFieldOptions: supportedFieldOptions,
                     showAdvancedByDefault: not (contextRow.enabled ?? true),
+                    globalContextDocsUrl: globalContextDocsUrl,
+                    supportedFieldsDocsUrl: supportedFieldsDocsUrl,
                 } only %}
             {% endfor %}
         </div>
@@ -73,5 +80,7 @@
         contextRowId: '__CONTEXT_INDEX__',
         supportedFieldOptions: supportedFieldOptions,
         showAdvancedByDefault: false,
+        globalContextDocsUrl: globalContextDocsUrl,
+        supportedFieldsDocsUrl: supportedFieldsDocsUrl,
     } only %}
 </template>

@@ -1,3 +1,6 @@
+{% set globalContextDocsUrl = globalContextDocsUrl ?? 'https://www.jtdevelop.com/development/plugins/autofill/autofill-fields#global-context' %}
+{% set supportedFieldsDocsUrl = supportedFieldsDocsUrl ?? 'https://www.jtdevelop.com/development/plugins/autofill/supported-fields' %}
+
 <div class="matrixblock" data-context-row role="listitem">
     <div class="titlebar">
         <div class="blocktype"><strong>Context Row</strong></div>
@@ -13,7 +16,8 @@
                     <label>
                         Context Field
                         {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                            tooltipText: 'A read-only field whose current value is included as context for AI. It is not directly updated by this context row.'
+                            tooltipHtml: 'A read-only field whose current value is included as context for AI. It is not directly updated by this context row. <a href="' ~ supportedFieldsDocsUrl ~ '" target="_blank" rel="noopener">See supported fields</a>.',
+                            tooltipText: 'A read-only field whose current value is included as context for AI. It is not directly updated by this context row. See the supported fields docs.'
                         } only %}
                     </label>
                 </div>
@@ -39,7 +43,8 @@
                     <label>
                         Context Prompt (Optional)
                         {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                            tooltipText: 'Optional note explaining how AI should interpret this context field (for example, “use as source of truth”).'
+                            tooltipHtml: 'Optional note explaining how AI should interpret this context field, for example, "use as source of truth." <a href="' ~ globalContextDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+                            tooltipText: 'Optional note explaining how AI should interpret this context field, for example, use as source of truth. Learn more in the global context docs.'
                         } only %}
                     </label>
                 </div>
@@ -62,7 +67,8 @@
                         <label>
                             Behavior
                             {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                                tooltipText: 'Context-row behavior controls whether this row participates in prompt building.'
+                                tooltipHtml: 'Context-row behavior controls whether this row participates in prompt building. <a href="' ~ globalContextDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+                                tooltipText: 'Context-row behavior controls whether this row participates in prompt building. Learn more in the global context docs.'
                             } only %}
                         </label>
                     </div>
@@ -72,7 +78,8 @@
                             <input type="checkbox" name="contextRows[{{ contextRowId }}][enabled]" value="1"{% if contextRow.enabled ?? true %} checked{% endif %}>
                             Row Enabled
                             {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                                tooltipText: 'Disable this to temporarily remove this context field from prompts without deleting the row.'
+                                tooltipHtml: 'Disable this to temporarily remove this context field from prompts without deleting the row. <a href="' ~ globalContextDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+                                tooltipText: 'Disable this to temporarily remove this context field from prompts without deleting the row. Learn more in the global context docs.'
                             } only %}
                         </label>
                     </div>

@@ -3,7 +3,8 @@
         <label>
             Field Configuration Rows
             {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
-                tooltipText: 'Rows run in order. Each row targets one field and defines how AI should generate or review that field value.'
+                tooltipHtml: 'Rows run in order. Each row targets one field and defines how AI should generate or review that field value. <a href="' ~ generationRowsDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+                tooltipText: 'Rows run in order. Each row targets one field and defines how AI should generate or review that field value. Learn more in the generation rows docs.'
             } only %}
         </label>
     </div>
@@ -18,6 +19,9 @@
                     rowId: 'row-' ~ loop.index0,
                     supportedFieldOptions: supportedFieldOptions,
                     showAdvancedByDefault: not (row.requiresApproval ?? true) or not (row.includeCurrentFieldValue ?? true) or not (row.overrideCurrentValue ?? true) or not (row.enabled ?? true),
+                    generationRowsDocsUrl: generationRowsDocsUrl,
+                    supportedFieldsDocsUrl: supportedFieldsDocsUrl,
+                    advancedRowSettingsDocsUrl: advancedRowSettingsDocsUrl,
                 } only %}
             {% endfor %}
         </div>
@@ -59,5 +63,8 @@
         rowId: '__INDEX__',
         supportedFieldOptions: supportedFieldOptions,
         showAdvancedByDefault: false,
+        generationRowsDocsUrl: generationRowsDocsUrl,
+        supportedFieldsDocsUrl: supportedFieldsDocsUrl,
+        advancedRowSettingsDocsUrl: advancedRowSettingsDocsUrl,
     } only %}
 </template>

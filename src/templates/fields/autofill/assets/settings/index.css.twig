@@ -168,9 +168,13 @@
     line-height: 1.35;
     white-space: normal;
     opacity: 0;
-    pointer-events: none;
     visibility: hidden;
     transition: opacity 120ms ease, visibility 120ms ease;
+}
+
+.autofill-help-tip__bubble a {
+    color: var(--link-color);
+    text-decoration: underline;
 }
 
 .autofill-help-tip:hover .autofill-help-tip__bubble,

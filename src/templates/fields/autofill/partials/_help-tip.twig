@@ -1,10 +1,17 @@
+{% set tooltipLabel = tooltipText ?? (tooltipHtml ?? '')|striptags %}
+
 <span
     class="autofill-help-tip"
     tabindex="0"
     role="note"
-    aria-label="{{ tooltipText }}"
+    aria-label="{{ tooltipLabel }}"
 >
     <span class="autofill-help-tip__icon" aria-hidden="true">?</span>
-    <span class="autofill-help-tip__bubble">{{ tooltipText }}</span>
+    <span class="autofill-help-tip__bubble">
+        {% if tooltipHtml is defined %}
+            {{ tooltipHtml|raw }}
+        {% else %}
+            {{ tooltipText }}
+        {% endif %}
+    </span>
 </span>
-
