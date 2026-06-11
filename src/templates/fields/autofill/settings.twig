@@ -10,6 +10,7 @@
 {% set advancedRowSettingsDocsUrl = autofillFieldsDocsUrl ~ '#advanced-row-settings' %}
 {% set editorWorkflowDocsUrl = docsBaseUrl ~ '/editor-workflow' %}
 {% set supportedFieldsDocsUrl = docsBaseUrl ~ '/supported-fields' %}
+{% set supportedFieldsEndpoint = actionUrl('autofill/field-settings/supported-fields') %}
 
 {% set entryTypeScopeHelpTip %}
     {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
@@ -123,6 +124,10 @@
     advancedRowSettingsDocsUrl: advancedRowSettingsDocsUrl,
 } only %}
 
+<div class="light autofill-field-settings-status" data-autofill-field-settings-status hidden></div>
+
+<div class="autofill-section-spacer" aria-hidden="true"></div>
+
 {% set contextRowErrors = field.getErrors('contextRows') %}
 {% set globalPromptErrors = field.getErrors('globalPrompt') %}
 {% include 'autofill/fields/autofill/partials/_global-context-fields.twig' with {
@@ -140,5 +145,8 @@
 {% endcss %}
 
 {% js %}
+window.autofillFieldSettings = {
+    supportedFieldsEndpoint: '{{ supportedFieldsEndpoint|e('js') }}',
+};
 {% include 'autofill/fields/autofill/assets/settings/index.js.twig' %}
 {% endjs %}

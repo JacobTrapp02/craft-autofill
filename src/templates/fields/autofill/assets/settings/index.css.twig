@@ -23,6 +23,14 @@
     padding: 8px 10px;
 }
 
+[data-autofill-context-settings-field] {
+    margin-top: 24px;
+}
+
+.autofill-section-spacer {
+    height: 24px;
+}
+
 [data-autofill-row-builder] .field,
 [data-autofill-context-builder] .field {
     margin: 0 0 8px;
@@ -230,6 +238,36 @@
 [data-autofill-row-builder] .selectize-control,
 [data-autofill-context-builder] .selectize-control {
     width: 100%;
+    min-height: 44px;
+}
+
+[data-autofill-row-builder] .selectize-control.single .selectize-input,
+[data-autofill-context-builder] .selectize-control.single .selectize-input {
+    align-items: center;
+    display: flex;
+    height: 44px;
+    min-height: 44px;
+    padding-block: 0;
+}
+
+[data-autofill-row-builder] .selectize-control.single .selectize-input > input,
+[data-autofill-context-builder] .selectize-control.single .selectize-input > input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+[data-autofill-row-builder] .selectize-control.single .selectize-input:after,
+[data-autofill-context-builder] .selectize-control.single .selectize-input:after {
+    flex: 0 0 auto;
+}
+
+[data-autofill-row-builder] .selectize-control .autofill-field-select-dropdown,
+[data-autofill-context-builder] .selectize-control .autofill-field-select-dropdown {
+    left: 0 !important;
+    position: absolute !important;
+    top: 100% !important;
+    width: 100% !important;
+    z-index: 10000;
 }
 
 [data-autofill-row-builder] .target-field-col .selectize-input,

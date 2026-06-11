@@ -8,14 +8,71 @@
     const contextContainer = contextBuilder?.querySelector('[data-context-rows-container]');
     const addContextButton = contextBuilder?.querySelector('[data-action="add-context-row"]');
     const contextTemplate = document.querySelector('template[data-context-row-template]');
+    const entryTypeSelect = document.querySelector('#{{ 'entryTypeUid'|namespaceInputId|e('js') }}');
+    const settingsStatus = document.querySelector('[data-autofill-field-settings-status]');
 
     if (!builder || !container || !addButton || !template) {
         return;
     }
 
-    const fieldTypeByUid = {{ supportedFieldTypeMap|json_encode|raw }};
-    const fieldRequiresProByUid = {{ supportedFieldRequiresProMap|json_encode|raw }};
+    let fieldTypeByUid = {{ supportedFieldTypeMap|json_encode|raw }};
+    let fieldRequiresProByUid = {{ supportedFieldRequiresProMap|json_encode|raw }};
+    let currentFieldOptions = {{ supportedFieldOptions|json_encode|raw }};
+    const isProEdition = {{ isProEdition ? 'true' : 'false' }};
     const hasSelectize = !!(window.jQuery && window.jQuery.fn && window.jQuery.fn.selectize);
+    const supportedFieldsEndpoint = window.autofillFieldSettings?.supportedFieldsEndpoint || '';
+
+    const fieldOptionLabel = (field) => {
+        const name = String(field?.name || '');
+        const handle = String(field?.handle || '');
+        const requiresPro = !!field?.requiresPro;
+        let label = handle ? `${name} (${handle})` : name;
+
+        if (requiresPro) {
+            label += ' - Pro';
+        }
+
+        return label;
+    };
+
+    const normalizeFieldOptions = (fields) => {
+        const options = [{ label: 'Select a field', value: '' }];
+        const nextFieldTypeByUid = {};
+        const nextFieldRequiresProByUid = {};
+
+        if (!Array.isArray(fields)) {
+            return { options, fieldTypes: nextFieldTypeByUid, proFields: nextFieldRequiresProByUid };
+        }
+
+        fields.forEach((field) => {
+            const value = String(field?.uid || '');
+            if (!value) {
+                return;
+            }
+
+            const requiresPro = !isProEdition && (!!field?.requiresPro || field?.availableInFreeVersion === false);
+            options.push({
+                label: fieldOptionLabel({ ...field, requiresPro }),
+                value,
+                fieldType: String(field?.adapter || ''),
+                requiresPro,
+            });
+            nextFieldTypeByUid[value] = String(field?.adapter || '');
+            nextFieldRequiresProByUid[value] = requiresPro;
+        });
+
+        return { options, fieldTypes: nextFieldTypeByUid, proFields: nextFieldRequiresProByUid };
+    };
+
+    const setSettingsStatus = (message, isError = false) => {
+        if (!(settingsStatus instanceof HTMLElement)) {
+            return;
+        }
+
+        settingsStatus.textContent = message || '';
+        settingsStatus.hidden = !message;
+        settingsStatus.classList.toggle('error', isError);
+    };
 
     const formatFieldType = (raw) => {
         if (!raw) {
@@ -188,6 +245,7 @@
                 closeAfterSelect: true,
                 allowEmptyOption: true,
                 showEmptyOptionInDropdown: true,
+                dropdownClass: 'autofill-field-select-dropdown',
                 render: {
                     option(data, escape) {
                         const requiresPro = !!fieldRequiresProByUid[data.value];
@@ -203,6 +261,113 @@
                 ...config,
             });
         });
+    };
+
+    const applyOptionsToSelect = (select) => {
+        if (!(select instanceof HTMLSelectElement)) {
+            return;
+        }
+
+        const currentValue = select.value;
+        const hasCurrentValue = currentFieldOptions.some((option) => option.value === currentValue);
+        const nextValue = hasCurrentValue ? currentValue : '';
+        const selectize = select.selectize;
+
+        select.innerHTML = '';
+        currentFieldOptions.forEach((option) => {
+            const optionElement = document.createElement('option');
+            optionElement.value = option.value;
+            optionElement.textContent = option.label;
+
+            if (option.fieldType) {
+                optionElement.dataset.fieldType = option.fieldType;
+            }
+
+            if (option.requiresPro) {
+                optionElement.dataset.requiresPro = '1';
+                optionElement.classList.add('autofill-pro-option');
+            }
+
+            optionElement.selected = option.value === nextValue;
+            select.appendChild(optionElement);
+        });
+
+        select.value = nextValue;
+
+        if (selectize) {
+            selectize.clearOptions();
+            currentFieldOptions.forEach((option) => {
+                selectize.addOption({
+                    text: option.label,
+                    value: option.value,
+                    fieldType: option.fieldType || '',
+                    requiresPro: option.requiresPro ? '1' : '',
+                });
+            });
+            selectize.setValue(nextValue, true);
+            selectize.refreshOptions(false);
+            selectize.refreshItems();
+        }
+    };
+
+    const refreshAllSelectOptions = () => {
+        container.querySelectorAll('select.js-target-field-select').forEach((select) => {
+            applyOptionsToSelect(select);
+        });
+        contextContainer?.querySelectorAll('select.js-global-context-select').forEach((select) => {
+            applyOptionsToSelect(select);
+        });
+        refreshAllFieldMeta();
+        container.querySelectorAll('[data-row]').forEach((row) => {
+            refreshSeomaticConfig(row);
+            refreshRelatedConfig(row);
+            refreshLinkConfig(row);
+        });
+    };
+
+    const updateSupportedFields = (fields) => {
+        const normalized = normalizeFieldOptions(fields);
+        currentFieldOptions = normalized.options;
+        fieldTypeByUid = normalized.fieldTypes;
+        fieldRequiresProByUid = normalized.proFields;
+        refreshAllSelectOptions();
+    };
+
+    const requestSupportedFields = async (entryTypeUid) => {
+        if (!supportedFieldsEndpoint) {
+            return;
+        }
+
+        const body = new FormData();
+        body.append('entryTypeUid', entryTypeUid);
+
+        if (window.Craft?.csrfTokenName && window.Craft?.csrfTokenValue) {
+            body.append(window.Craft.csrfTokenName, window.Craft.csrfTokenValue);
+        }
+
+        setSettingsStatus(entryTypeUid ? 'Loading fields for selected entry type...' : '');
+
+        try {
+            const response = await fetch(supportedFieldsEndpoint, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body,
+                credentials: 'same-origin',
+            });
+            const data = await response.json();
+
+            if (!response.ok || !data?.success) {
+                throw new Error(data?.error || 'Could not load fields for the selected entry type.');
+            }
+
+            updateSupportedFields(data.fields || []);
+            setSettingsStatus('');
+        } catch (error) {
+            setSettingsStatus(error instanceof Error ? error.message : 'Could not load fields for the selected entry type.', true);
+        }
     };
 
     const initRowSelectize = (row) => {
@@ -272,6 +437,7 @@
         container.insertAdjacentHTML('beforeend', html);
         const row = container.lastElementChild;
         initRowSelectize(row);
+        applyOptionsToSelect(row?.querySelector('select.js-target-field-select'));
         refreshAllFieldMeta();
     };
 
@@ -285,6 +451,7 @@
         contextContainer.insertAdjacentHTML('beforeend', html);
         const row = contextContainer.lastElementChild;
         initContextSelectize(row);
+        applyOptionsToSelect(row?.querySelector('select.js-global-context-select'));
         refreshAllFieldMeta();
     };
 
@@ -294,6 +461,11 @@
 
     addButton.addEventListener('click', addRow);
     addContextButton?.addEventListener('click', addContextRow);
+    if (entryTypeSelect instanceof HTMLSelectElement) {
+        entryTypeSelect.addEventListener('change', () => {
+            requestSupportedFields(entryTypeSelect.value);
+        });
+    }
 
     const handleRowActions = (event, options) => {
         const rawTarget = event.target;
