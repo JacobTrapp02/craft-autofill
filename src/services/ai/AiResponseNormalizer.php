@@ -459,9 +459,17 @@ class AiResponseNormalizer extends Component
         }
 
         if ($adapterKey === 'seomatic') {
+            $sections = is_array($fieldContract['sections'] ?? null) ? $fieldContract['sections'] : [];
+
             return [
                 'type' => 'seomaticBasic',
                 'source' => 'adapter:seomatic',
+                'visibleFields' => [
+                    'seoTitle' => $this->asBool($sections['seoTitle'] ?? true, true),
+                    'siteNamePosition' => $this->asBool($sections['siteNamePosition'] ?? true, true),
+                    'seoDescription' => $this->asBool($sections['seoDescription'] ?? true, true),
+                    'seoKeywords' => $this->asBool($sections['seoKeywords'] ?? true, true),
+                ],
             ];
         }
 

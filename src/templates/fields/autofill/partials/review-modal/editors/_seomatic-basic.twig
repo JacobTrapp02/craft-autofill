@@ -1,49 +1,57 @@
 {% import '_includes/forms.twig' as forms %}
 
 <div class="autofill-review-editor-seomatic" data-autofill-review-input="seomatic-basic">
-    {{ forms.textField({
-        label: 'SEO Title',
-        value: '',
-        inputAttributes: {
-            data: {
-                'autofill-review-input': 'seomatic-seoTitle',
+    <div data-autofill-review-field-wrap="seoTitle">
+        {{ forms.textField({
+            label: 'SEO Title',
+            value: '',
+            inputAttributes: {
+                data: {
+                    'autofill-review-input': 'seomatic-seoTitle',
+                },
             },
-        },
-    }) }}
+        }) }}
+    </div>
 
-    {{ forms.selectField({
-        label: 'Site Name Position',
-        options: [
-            { label: 'Select position', value: '' },
-            { label: 'before', value: 'before' },
-            { label: 'after', value: 'after' },
-            { label: 'none', value: 'none' },
-        ],
-        value: '',
-        inputAttributes: {
-            data: {
-                'autofill-review-input': 'seomatic-siteNamePosition',
+    <div data-autofill-review-field-wrap="siteNamePosition">
+        {{ forms.selectField({
+            label: 'Site Name Position',
+            options: [
+                { label: 'Select position', value: '' },
+                { label: 'before', value: 'before' },
+                { label: 'after', value: 'after' },
+                { label: 'none', value: 'none' },
+            ],
+            value: '',
+            inputAttributes: {
+                data: {
+                    'autofill-review-input': 'seomatic-siteNamePosition',
+                },
             },
-        },
-    }) }}
+        }) }}
+    </div>
 
-    {{ forms.textField({
-        label: 'SEO Description',
-        value: '',
-        inputAttributes: {
-            data: {
-                'autofill-review-input': 'seomatic-seoDescription',
+    <div data-autofill-review-field-wrap="seoDescription">
+        {{ forms.textField({
+            label: 'SEO Description',
+            value: '',
+            inputAttributes: {
+                data: {
+                    'autofill-review-input': 'seomatic-seoDescription',
+                },
             },
-        },
-    }) }}
+        }) }}
+    </div>
 
-    {{ forms.textField({
-        label: 'SEO Keywords',
-        value: '',
-        inputAttributes: {
-            data: {
-                'autofill-review-input': 'seomatic-seoKeywords',
+    <div data-autofill-review-field-wrap="seoKeywords">
+        {{ forms.textField({
+            label: 'SEO Keywords',
+            value: '',
+            inputAttributes: {
+                data: {
+                    'autofill-review-input': 'seomatic-seoKeywords',
+                },
             },
-        },
-    }) }}
+        }) }}
+    </div>
 </div>

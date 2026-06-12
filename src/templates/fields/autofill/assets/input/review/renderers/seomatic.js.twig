@@ -38,15 +38,30 @@
                 ? container.querySelector('[data-autofill-review-input="seomatic-basic"]')
                 : null;
             const host = wrapper instanceof HTMLElement ? wrapper : container;
+            const visibleFields = suggestion?.reviewEditor && typeof suggestion.reviewEditor === 'object'
+                && suggestion.reviewEditor.visibleFields && typeof suggestion.reviewEditor.visibleFields === 'object'
+                ? suggestion.reviewEditor.visibleFields
+                : {};
 
             const normalized = normalizeSeomaticSuggestion(suggestion?.value ?? {});
+            const isVisible = (key) => visibleFields[key] !== false;
             const setValue = (key, value) => {
                 const element = host.querySelector(`[data-autofill-review-input="seomatic-${key}"]`);
                 if (element instanceof HTMLInputElement || element instanceof HTMLSelectElement) {
                     element.value = value;
                 }
             };
+            const setVisibility = (key) => {
+                const field = host.querySelector(`[data-autofill-review-field-wrap="${key}"]`);
+                if (field instanceof HTMLElement) {
+                    field.hidden = !isVisible(key);
+                }
+            };
 
+            setVisibility('seoTitle');
+            setVisibility('siteNamePosition');
+            setVisibility('seoDescription');
+            setVisibility('seoKeywords');
             setValue('seoTitle', normalized.seoTitle);
             setValue('siteNamePosition', normalized.siteNamePosition);
             setValue('seoDescription', normalized.seoDescription);
@@ -56,8 +71,17 @@
             const wrapper = container.querySelector('[data-autofill-review-input="seomatic-basic"]');
             const host = wrapper instanceof HTMLElement ? wrapper : container;
             const current = normalizeSeomaticSuggestion(suggestion?.value ?? {});
+            const visibleFields = suggestion?.reviewEditor && typeof suggestion.reviewEditor === 'object'
+                && suggestion.reviewEditor.visibleFields && typeof suggestion.reviewEditor.visibleFields === 'object'
+                ? suggestion.reviewEditor.visibleFields
+                : {};
+            const isVisible = (key) => visibleFields[key] !== false;
 
             const read = (fieldKey) => {
+                if (!isVisible(fieldKey)) {
+                    return '';
+                }
+
                 const element = host.querySelector(`[data-autofill-review-input="seomatic-${fieldKey}"]`);
                 if (element instanceof HTMLInputElement || element instanceof HTMLSelectElement) {
                     return element.value.trim();
@@ -95,4 +119,3 @@
             return cleaned;
         },
     });
-
