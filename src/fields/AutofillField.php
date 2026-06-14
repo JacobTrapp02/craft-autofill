@@ -273,6 +273,7 @@ class AutofillField extends Field
             $enabled = $this->toBool($row['enabled'] ?? true);
             $seomatic = $this->normalizeSeomaticRowConfig($row['seomatic'] ?? null);
             $related = $this->normalizeRelatedRowConfig($row['related'] ?? null);
+            $link = $this->normalizeLinkRowConfig($row['link'] ?? null);
 
             $hasMeaningfulInput = $targetFieldUid !== '' || $prompt !== '';
             if (!$hasMeaningfulInput) {
@@ -288,6 +289,7 @@ class AutofillField extends Field
                 'enabled' => $enabled,
                 'seomatic' => $seomatic,
                 'related' => $related,
+                'link' => $link,
             ];
         }
 
@@ -450,6 +452,55 @@ class AutofillField extends Field
     }
 
     /**
+     * @param mixed $raw
+     * @return array<string, array{mode:string,count:int}>
+     */
+    private function normalizeLinkRowConfig(mixed $raw): array
+    {
+        $config = is_array($raw) ? $raw : [];
+
+        return [
+            'entry' => $this->normalizeLinkTypeRowConfig($config['entry'] ?? null),
+            'category' => $this->normalizeLinkTypeRowConfig($config['category'] ?? null),
+            'asset' => $this->normalizeLinkTypeRowConfig($config['asset'] ?? null),
+        ];
+    }
+
+    /**
+     * @param mixed $raw
+     * @return array{mode:string,count:int}
+     */
+    private function normalizeLinkTypeRowConfig(mixed $raw): array
+    {
+        $config = is_array($raw) ? $raw : [];
+        $mode = strtolower(trim((string)($config['mode'] ?? 'topN')));
+        if (!in_array($mode, ['topn', 'mostrecent', 'all', 'none'], true)) {
+            $mode = 'topN';
+        } else {
+            $mode = match ($mode) {
+                'topn' => 'topN',
+                'mostrecent' => 'mostRecent',
+                default => $mode,
+            };
+        }
+
+        $count = (int)($config['count'] ?? 10);
+        if ($count <= 0) {
+            return [
+                'mode' => 'none',
+                'count' => 0,
+            ];
+        }
+
+        $count = min(250, $count);
+
+        return [
+            'mode' => $mode,
+            'count' => $count,
+        ];
+    }
+
+    /**
      * Ensures fields already selected in saved rows remain selectable, even if discovery omitted them.
      *
      * @param array<int, array<string, mixed>> $supportedFields
@@ -501,14 +552,9 @@ class AutofillField extends Field
                 continue;
             }
 
-            $supportedFields[] = [
-                'uid' => (string)($field->uid ?? ''),
-                'handle' => (string)($field->handle ?? ''),
-                'name' => (string)($field->name ?? ''),
-                'type' => $field::class,
-                'adapter' => $adapter->getKey(),
-                'availableInFreeVersion' => $adapter->isAvailableInFreeVersion(),
-            ];
+            $supportedFields[] = AutofillPlugin::getInstance()
+                ->getFieldDiscoveryService()
+                ->describeSupportedField($field, $adapter->getKey(), $adapter->isAvailableInFreeVersion());
             $existingByUid[$uid] = true;
         }
 

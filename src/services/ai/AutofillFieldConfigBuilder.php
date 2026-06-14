@@ -56,6 +56,12 @@ class AutofillFieldConfigBuilder extends Component
             $rowPromptConfigByUid[$targetUid] = $row;
         }
 
+        if ($entry instanceof Entry) {
+            foreach (array_keys($rowPromptConfigByUid) as $targetUid) {
+                $rowPromptConfigByUid[$targetUid]['entryId'] = (int)$entry->id;
+            }
+        }
+
         if ($field->entryTypeUid !== '') {
             $entryType = Craft::$app->getEntries()->getEntryTypeByUid($field->entryTypeUid);
 

@@ -17,6 +17,7 @@
 
     let fieldTypeByUid = {{ supportedFieldTypeMap|json_encode|raw }};
     let fieldRequiresProByUid = {{ supportedFieldRequiresProMap|json_encode|raw }};
+    let fieldLinkScopeByUid = {{ supportedFieldLinkScopeMap|json_encode|raw }};
     let currentFieldOptions = {{ supportedFieldOptions|json_encode|raw }};
     const isProEdition = {{ isProEdition ? 'true' : 'false' }};
     const hasSelectize = !!(window.jQuery && window.jQuery.fn && window.jQuery.fn.selectize);
@@ -39,9 +40,10 @@
         const options = [{ label: 'Select a field', value: '' }];
         const nextFieldTypeByUid = {};
         const nextFieldRequiresProByUid = {};
+        const nextFieldLinkScopeByUid = {};
 
         if (!Array.isArray(fields)) {
-            return { options, fieldTypes: nextFieldTypeByUid, proFields: nextFieldRequiresProByUid };
+            return { options, fieldTypes: nextFieldTypeByUid, proFields: nextFieldRequiresProByUid, linkScopes: nextFieldLinkScopeByUid };
         }
 
         fields.forEach((field) => {
@@ -59,9 +61,10 @@
             });
             nextFieldTypeByUid[value] = String(field?.adapter || '');
             nextFieldRequiresProByUid[value] = requiresPro;
+            nextFieldLinkScopeByUid[value] = field?.linkScopeSummary || null;
         });
 
-        return { options, fieldTypes: nextFieldTypeByUid, proFields: nextFieldRequiresProByUid };
+        return { options, fieldTypes: nextFieldTypeByUid, proFields: nextFieldRequiresProByUid, linkScopes: nextFieldLinkScopeByUid };
     };
 
     const setSettingsStatus = (message, isError = false) => {
@@ -197,6 +200,7 @@
             ? select.selectedOptions[0]
             : null;
         const selectedFieldType = fieldTypeByUid[select.value] || selectedOption?.dataset?.fieldType || '';
+        const linkScope = fieldLinkScopeByUid[select.value] || null;
         const enabled = isLinkFieldType(selectedFieldType);
         config.hidden = !enabled;
 
@@ -208,6 +212,7 @@
             const modeSelect = row.querySelector(`[data-link-mode="${typeKey}"]`);
             const countWrap = row.querySelector(`[data-link-count-wrap="${typeKey}"]`);
             const countInput = row.querySelector(`[data-link-count="${typeKey}"]`);
+            const summaryNode = row.querySelector(`[data-link-scope-summary="${typeKey}"]`);
             if (!(modeSelect instanceof HTMLSelectElement) || !(countWrap instanceof HTMLElement)) {
                 return;
             }
@@ -218,6 +223,14 @@
 
             if (countInput instanceof HTMLInputElement) {
                 countInput.disabled = !showCount;
+            }
+
+            if (summaryNode instanceof HTMLElement) {
+                const typeScope = linkScope && typeof linkScope === 'object' ? linkScope[typeKey] : null;
+                const summaryText = typeScope && typeof typeScope.summary === 'string'
+                    ? typeScope.summary
+                    : 'Source scope will follow the selected Link field.';
+                summaryNode.textContent = `Included source scope: ${summaryText}`;
             }
         });
     };
@@ -330,6 +343,7 @@
         currentFieldOptions = normalized.options;
         fieldTypeByUid = normalized.fieldTypes;
         fieldRequiresProByUid = normalized.proFields;
+        fieldLinkScopeByUid = normalized.linkScopes;
         refreshAllSelectOptions();
     };
 

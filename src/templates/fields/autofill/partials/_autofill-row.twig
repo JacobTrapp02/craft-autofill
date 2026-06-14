@@ -216,6 +216,7 @@
                                 {% set linkCount = linkCfg.count ?? 10 %}
                                 <div class="autofill-link-config__group" data-link-type-config="{{ target.key }}">
                                     <div class="heading"><label>{{ target.label }}</label></div>
+                                    <div class="light" data-link-scope-summary="{{ target.key }}">Source scope will follow the selected Link field.</div>
                                     <div style="display:grid;grid-template-columns:minmax(160px,240px) minmax(140px,180px);gap:10px;align-items:end;">
                                         <label class="field">
                                             <div class="heading"><label>Mode</label></div>
@@ -235,7 +236,7 @@
                                                 <input
                                                     class="text fullwidth"
                                                     type="number"
-                                                    min="1"
+                                                    min="0"
                                                     max="250"
                                                     step="1"
                                                     name="rows[{{ rowId }}][link][{{ target.key }}][count]"

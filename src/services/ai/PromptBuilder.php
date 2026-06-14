@@ -49,8 +49,8 @@ class PromptBuilder extends Component
 
             $payload = [
                 'targetFieldName' => $targetFieldName,
-                'fieldContract' => $config['fieldContractsByUid'][$targetFieldUid] ?? [],
                 'prompt' => (string)($row['prompt'] ?? ''),
+                'fieldContract' => $config['fieldContractsByUid'][$targetFieldUid] ?? [],
             ];
 
             if ($includeCurrentFieldValue && $hasCurrentValue) {

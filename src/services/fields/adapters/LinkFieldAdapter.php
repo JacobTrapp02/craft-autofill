@@ -98,6 +98,7 @@ class LinkFieldAdapter implements FieldAdapterInterface
         }
 
         $config = $this->normalizePromptConfig($promptConfig, $field);
+        $currentEntryId = $this->currentEntryIdFromPromptConfig($promptConfig);
         $linkTypes = $field->getLinkTypes();
         $allowedTypes = array_keys($linkTypes);
         $typeLabels = [];
@@ -114,7 +115,7 @@ class LinkFieldAdapter implements FieldAdapterInterface
                 $typeConfig = $config['link'][$typeId] ?? $this->defaultElementContextConfig();
                 $mode = $typeConfig['mode'];
                 $count = $typeConfig['count'];
-                $candidates = $this->candidateRecordsForLinkType($field, $typeId, $linkType, $mode, $count);
+                $candidates = $this->candidateRecordsForLinkType($field, $typeId, $linkType, $mode, $count, $currentEntryId);
                 $candidatesByType[$typeId] = $candidates;
 
                 if ($mode === self::MODE_NONE) {
@@ -461,7 +462,14 @@ class LinkFieldAdapter implements FieldAdapterInterface
         };
 
         $count = (int)($config['count'] ?? 10);
-        $count = max(1, min(250, $count));
+        if ($count <= 0) {
+            return [
+                'mode' => self::MODE_NONE,
+                'count' => 0,
+            ];
+        }
+
+        $count = min(250, $count);
 
         return [
             'mode' => $canonicalMode,
@@ -512,7 +520,7 @@ class LinkFieldAdapter implements FieldAdapterInterface
     /**
      * @return array<int,array<string,mixed>>
      */
-    private function candidateRecordsForLinkType(LinkField $field, string $typeId, BaseLinkType $linkType, string $mode, int $count): array
+    private function candidateRecordsForLinkType(LinkField $field, string $typeId, BaseLinkType $linkType, string $mode, int $count, ?int $currentEntryId = null): array
     {
         if (!$this->supportsCandidateContext($linkType)) {
             return [];
@@ -523,10 +531,10 @@ class LinkFieldAdapter implements FieldAdapterInterface
         }
 
         $rows = match ($mode) {
-            self::MODE_TOP_N => $this->candidateRowsForTopN($field, $typeId, $linkType, $count),
-            self::MODE_MOST_RECENT => $this->candidateRowsForMostRecent($typeId, $linkType, $count),
-            self::MODE_ALL => $this->candidateRowsForAll($typeId, $linkType),
-            default => $this->candidateRowsForTopN($field, $typeId, $linkType, $count),
+            self::MODE_TOP_N => $this->candidateRowsForTopN($field, $typeId, $linkType, $count, $currentEntryId),
+            self::MODE_MOST_RECENT => $this->candidateRowsForMostRecent($typeId, $linkType, $count, $currentEntryId),
+            self::MODE_ALL => $this->candidateRowsForAll($typeId, $linkType, $currentEntryId),
+            default => $this->candidateRowsForTopN($field, $typeId, $linkType, $count, $currentEntryId),
         };
 
         $records = [];
@@ -571,14 +579,18 @@ class LinkFieldAdapter implements FieldAdapterInterface
     /**
      * @return array<int,array{element:ElementInterface,title:string,context:string}>
      */
-    private function candidateRowsForTopN(LinkField $field, string $typeId, BaseLinkType $linkType, int $count): array
+    private function candidateRowsForTopN(LinkField $field, string $typeId, BaseLinkType $linkType, int $count, ?int $currentEntryId = null): array
     {
         $popularIds = $this->topRelationTargetIds((int)($field->id ?? 0), max(25, $count * 8));
-        if ($popularIds === []) {
-            return $this->candidateRowsForMostRecent($typeId, $linkType, $count);
+        if ($typeId === self::ELEMENT_TYPE_ENTRY && $currentEntryId !== null && $currentEntryId > 0) {
+            $popularIds = array_values(array_filter($popularIds, static fn(int $id): bool => $id !== $currentEntryId));
         }
 
-        $query = $this->buildElementQueryForLinkType($typeId, $linkType);
+        if ($popularIds === []) {
+            return $this->candidateRowsForMostRecent($typeId, $linkType, $count, $currentEntryId);
+        }
+
+        $query = $this->buildElementQueryForLinkType($typeId, $linkType, $currentEntryId);
         if (method_exists($query, 'id')) {
             $query->id($popularIds);
         }
@@ -618,15 +630,37 @@ class LinkFieldAdapter implements FieldAdapterInterface
             return strcasecmp((string)($a['title'] ?? ''), (string)($b['title'] ?? ''));
         });
 
-        return array_slice($rows, 0, $count);
+        $rows = array_slice($rows, 0, $count);
+        if (count($rows) >= $count) {
+            return $rows;
+        }
+
+        $excludedIds = [];
+        foreach ($rows as $row) {
+            $element = $row['element'] ?? null;
+            if ($element instanceof ElementInterface && is_numeric($element->id)) {
+                $excludedIds[] = (int)$element->id;
+            }
+        }
+
+        $fallbackRows = $this->candidateRowsForMostRecent($typeId, $linkType, $count, $currentEntryId, $excludedIds);
+        foreach ($fallbackRows as $fallbackRow) {
+            $rows[] = $fallbackRow;
+            if (count($rows) >= $count) {
+                break;
+            }
+        }
+
+        return $rows;
     }
 
     /**
      * @return array<int,array{element:ElementInterface,title:string,context:string}>
      */
-    private function candidateRowsForMostRecent(string $typeId, BaseLinkType $linkType, int $count): array
+    private function candidateRowsForMostRecent(string $typeId, BaseLinkType $linkType, int $count, ?int $currentEntryId = null, array $excludedIds = []): array
     {
-        $query = $this->buildElementQueryForLinkType($typeId, $linkType);
+        $query = $this->buildElementQueryForLinkType($typeId, $linkType, $currentEntryId);
+        $this->excludeElementIdsFromQuery($query, $excludedIds);
         if (method_exists($query, 'orderBy')) {
             $query->orderBy(['dateUpdated' => SORT_DESC, 'id' => SORT_DESC]);
         }
@@ -656,9 +690,9 @@ class LinkFieldAdapter implements FieldAdapterInterface
     /**
      * @return array<int,array{element:ElementInterface,title:string,context:string}>
      */
-    private function candidateRowsForAll(string $typeId, BaseLinkType $linkType): array
+    private function candidateRowsForAll(string $typeId, BaseLinkType $linkType, ?int $currentEntryId = null): array
     {
-        $query = $this->buildElementQueryForLinkType($typeId, $linkType);
+        $query = $this->buildElementQueryForLinkType($typeId, $linkType, $currentEntryId);
         if (method_exists($query, 'orderBy')) {
             $query->orderBy(['title' => SORT_ASC]);
         }
@@ -685,17 +719,17 @@ class LinkFieldAdapter implements FieldAdapterInterface
         return $rows;
     }
 
-    private function buildElementQueryForLinkType(string $typeId, BaseLinkType $linkType): mixed
+    private function buildElementQueryForLinkType(string $typeId, BaseLinkType $linkType, ?int $currentEntryId = null): mixed
     {
         return match ($typeId) {
-            self::ELEMENT_TYPE_ENTRY => $this->buildEntryQuery($linkType),
+            self::ELEMENT_TYPE_ENTRY => $this->buildEntryQuery($linkType, $currentEntryId),
             self::ELEMENT_TYPE_CATEGORY => $this->buildCategoryQuery($linkType),
             self::ELEMENT_TYPE_ASSET => $this->buildAssetQuery($linkType),
             default => throw new InvalidArgumentException(sprintf('Unsupported link candidate type "%s".', $typeId)),
         };
     }
 
-    private function buildEntryQuery(BaseLinkType $linkType): mixed
+    private function buildEntryQuery(BaseLinkType $linkType, ?int $currentEntryId = null): mixed
     {
         /** @var EntryLinkType $linkType */
         $query = EntryElement::find()
@@ -703,12 +737,26 @@ class LinkFieldAdapter implements FieldAdapterInterface
             ->status(null)
             ->uri('not :empty:');
 
+        if ($currentEntryId !== null && $currentEntryId > 0 && method_exists($query, 'andWhere')) {
+            $query->andWhere(['not', ['elements.id' => $currentEntryId]]);
+        }
+
         if (!$linkType->showUnpermittedEntries && method_exists($query, 'editable')) {
             $query->editable(true);
         }
 
         $this->applyEntrySources($query, $linkType->sources);
         return $query;
+    }
+
+    private function excludeElementIdsFromQuery(mixed $query, array $excludedIds): void
+    {
+        $excludedIds = array_values(array_unique(array_filter(array_map('intval', $excludedIds), static fn(int $id): bool => $id > 0)));
+        if ($excludedIds === [] || !method_exists($query, 'andWhere')) {
+            return;
+        }
+
+        $query->andWhere(['not in', 'elements.id', $excludedIds]);
     }
 
     private function buildCategoryQuery(BaseLinkType $linkType): mixed
@@ -900,6 +948,16 @@ class LinkFieldAdapter implements FieldAdapterInterface
 
         $matchedKeys = array_values(array_unique(array_filter($matchedKeys)));
         return count($matchedKeys) === 1 ? $matchedKeys[0] : '';
+    }
+
+    private function currentEntryIdFromPromptConfig(array $promptConfig): ?int
+    {
+        $entryId = $promptConfig['entryId'] ?? null;
+        if (!is_numeric($entryId) || (int)$entryId <= 0) {
+            return null;
+        }
+
+        return (int)$entryId;
     }
 
     private function elementExistsForLinkType(BaseElementLinkType $linkType, string $value): bool

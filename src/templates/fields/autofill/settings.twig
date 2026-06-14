@@ -40,6 +40,7 @@
 {% set supportedFieldOptions = [{ label: 'Select a field', value: '' }] %}
 {% set supportedFieldTypeMap = {} %}
 {% set supportedFieldRequiresProMap = {} %}
+{% set supportedFieldLinkScopeMap = {} %}
 {% for supportedField in supportedFields %}
     {% set fieldName = supportedField.name ?? '' %}
     {% set fieldHandle = supportedField.handle ?? '' %}
@@ -65,6 +66,9 @@
     }) %}
     {% set supportedFieldRequiresProMap = supportedFieldRequiresProMap|merge({
         (supportedField.uid): requiresPro
+    }) %}
+    {% set supportedFieldLinkScopeMap = supportedFieldLinkScopeMap|merge({
+        (supportedField.uid): supportedField.linkScopeSummary ?? null
     }) %}
 {% endfor %}
 
