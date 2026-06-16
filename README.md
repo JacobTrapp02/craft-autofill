@@ -1,18 +1,16 @@
 # Autofill
 
-Turn messy input into fully populated entries in seconds.
+Autofill adds an AI-assisted field type to Craft CMS that helps editors generate, review, and apply field suggestions from entry content. Configure the fields you want Autofill to manage, add prompts and optional global context, then let editors generate suggested values from the entry edit page.
+
+Full documentation is available at [jtdevelop.com/development/plugins/autofill](https://www.jtdevelop.com/development/plugins/autofill).
 
 ## Requirements
 
-This plugin requires Craft CMS 5.0.0 or later, and PHP 8.2 or later.
+Autofill requires Craft CMS 5.0.0 or later and PHP 8.2 or later.
 
 ## Installation
 
 You can install this plugin from the Plugin Store or with Composer.
-
-## Notes
-
-Deferred maintenance/refactor follow-ups are tracked in [TECH_DEBT.md](TECH_DEBT.md).
 
 #### From the Plugin Store
 
