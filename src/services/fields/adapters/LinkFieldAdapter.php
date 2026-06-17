@@ -41,7 +41,7 @@ class LinkFieldAdapter implements FieldAdapterInterface
         return 'link';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return false;
     }

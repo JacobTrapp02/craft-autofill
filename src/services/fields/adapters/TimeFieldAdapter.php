@@ -18,7 +18,7 @@ class TimeFieldAdapter implements FieldAdapterInterface
         return 'time';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

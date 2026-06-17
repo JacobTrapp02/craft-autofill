@@ -52,7 +52,7 @@
                 return;
             }
 
-            const requiresPro = !isProEdition && (!!field?.requiresPro || field?.availableInFreeVersion === false);
+            const requiresPro = !isProEdition && (!!field?.requiresPro || field?.availableInLiteVersion === false);
             options.push({
                 label: fieldOptionLabel({ ...field, requiresPro }),
                 value,

@@ -22,7 +22,7 @@ class FieldDiscoveryService extends Component
             'name' => 'Title',
             'type' => 'craft\\base\\Element::title',
             'adapter' => 'plainText',
-            'availableInFreeVersion' => true,
+            'availableInLiteVersion' => true,
         ],
         [
             'uid' => '__native__:slug',
@@ -30,7 +30,7 @@ class FieldDiscoveryService extends Component
             'name' => 'Slug',
             'type' => 'craft\\base\\Element::slug',
             'adapter' => 'plainText',
-            'availableInFreeVersion' => true,
+            'availableInLiteVersion' => true,
         ],
         [
             'uid' => '__native__:postDate',
@@ -38,7 +38,7 @@ class FieldDiscoveryService extends Component
             'name' => 'Post Date',
             'type' => 'craft\\elements\\Entry::postDate',
             'adapter' => 'date',
-            'availableInFreeVersion' => true,
+            'availableInLiteVersion' => true,
         ],
         [
             'uid' => '__native__:expiryDate',
@@ -46,7 +46,7 @@ class FieldDiscoveryService extends Component
             'name' => 'Expiration Date',
             'type' => 'craft\\elements\\Entry::expiryDate',
             'adapter' => 'date',
-            'availableInFreeVersion' => true,
+            'availableInLiteVersion' => true,
         ],
         [
             'uid' => '__native__:enabled',
@@ -54,7 +54,7 @@ class FieldDiscoveryService extends Component
             'name' => 'Enabled',
             'type' => 'craft\\base\\Element::enabled',
             'adapter' => 'lightswitch',
-            'availableInFreeVersion' => true,
+            'availableInLiteVersion' => true,
         ],
     ];
 
@@ -87,7 +87,7 @@ class FieldDiscoveryService extends Component
                 continue;
             }
 
-            $supported[] = $this->describeSupportedField($field, $adapter->getKey(), $adapter->isAvailableInFreeVersion());
+            $supported[] = $this->describeSupportedField($field, $adapter->getKey(), $adapter->isAvailableInLiteVersion());
         }
 
         return array_merge(self::NATIVE_ENTRY_FIELDS, $supported);
@@ -96,7 +96,7 @@ class FieldDiscoveryService extends Component
     /**
      * @return array<string, mixed>
      */
-    public function describeSupportedField(FieldInterface $field, string $adapterKey, bool $availableInFreeVersion): array
+    public function describeSupportedField(FieldInterface $field, string $adapterKey, bool $availableInLiteVersion): array
     {
         $meta = [
             'uid' => (string)($field->uid ?? ''),
@@ -104,7 +104,7 @@ class FieldDiscoveryService extends Component
             'name' => (string)($field->name ?? ''),
             'type' => $field::class,
             'adapter' => $adapterKey,
-            'availableInFreeVersion' => $availableInFreeVersion,
+            'availableInLiteVersion' => $availableInLiteVersion,
         ];
 
         if ($field instanceof LinkField) {

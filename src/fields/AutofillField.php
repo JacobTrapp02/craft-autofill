@@ -242,7 +242,7 @@ class AutofillField extends Field
 
         foreach (Craft::$app->getFields()->getAllFields() as $field) {
             if ($field instanceof self) {
-                $this->addError('name', 'Autofill Free supports one Autofill field. Upgrade to Autofill Pro to add more.');
+                $this->addError('name', 'Autofill Lite supports one Autofill field. Upgrade to Autofill Pro to add more.');
                 return;
             }
         }
@@ -554,7 +554,7 @@ class AutofillField extends Field
 
             $supportedFields[] = AutofillPlugin::getInstance()
                 ->getFieldDiscoveryService()
-                ->describeSupportedField($field, $adapter->getKey(), $adapter->isAvailableInFreeVersion());
+                ->describeSupportedField($field, $adapter->getKey(), $adapter->isAvailableInLiteVersion());
             $existingByUid[$uid] = true;
         }
 
@@ -567,11 +567,11 @@ class AutofillField extends Field
             return false;
         }
 
-        return !$this->isFieldUidAvailableInFreeVersion($fieldUid)
+        return !$this->isFieldUidAvailableInLiteVersion($fieldUid)
             && !$this->fieldUidWasAlreadySelected($fieldUid);
     }
 
-    private function isFieldUidAvailableInFreeVersion(string $fieldUid): bool
+    private function isFieldUidAvailableInLiteVersion(string $fieldUid): bool
     {
         if (str_starts_with($fieldUid, '__native__:')) {
             return true;
@@ -587,7 +587,7 @@ class AutofillField extends Field
             return true;
         }
 
-        return $adapter->isAvailableInFreeVersion();
+        return $adapter->isAvailableInLiteVersion();
     }
 
     private function fieldUidWasAlreadySelected(string $fieldUid): bool

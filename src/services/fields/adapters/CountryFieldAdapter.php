@@ -23,7 +23,7 @@ class CountryFieldAdapter implements FieldAdapterInterface
         return 'country';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

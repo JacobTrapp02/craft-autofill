@@ -16,7 +16,7 @@ class CheckboxesFieldAdapter implements FieldAdapterInterface
         return 'checkboxes';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

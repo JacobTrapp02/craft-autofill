@@ -17,7 +17,7 @@ class ColorFieldAdapter implements FieldAdapterInterface
         return 'color';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

@@ -19,7 +19,7 @@ class MoneyFieldAdapter implements FieldAdapterInterface
         return 'money';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

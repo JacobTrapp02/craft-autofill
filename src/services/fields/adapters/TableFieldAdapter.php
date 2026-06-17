@@ -18,7 +18,7 @@ class TableFieldAdapter implements FieldAdapterInterface
         return 'table';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return false;
     }

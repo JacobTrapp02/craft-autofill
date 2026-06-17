@@ -11,7 +11,7 @@ interface FieldAdapterInterface
 {
     public function getKey(): string;
 
-    public function isAvailableInFreeVersion(): bool;
+    public function isAvailableInLiteVersion(): bool;
 
     public function supports(FieldInterface $field): bool;
 

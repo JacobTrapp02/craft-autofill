@@ -18,7 +18,7 @@ class JsonFieldAdapter implements FieldAdapterInterface
         return 'json';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

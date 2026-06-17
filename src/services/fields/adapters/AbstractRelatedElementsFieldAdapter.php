@@ -16,7 +16,7 @@ abstract class AbstractRelatedElementsFieldAdapter implements FieldAdapterInterf
 {
     private const ALL_MODE_CANDIDATE_CAP = 1000;
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return false;
     }

@@ -16,7 +16,7 @@ class DropdownFieldAdapter implements FieldAdapterInterface
         return 'dropdown';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

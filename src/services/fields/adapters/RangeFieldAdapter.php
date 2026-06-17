@@ -16,7 +16,7 @@ class RangeFieldAdapter implements FieldAdapterInterface
         return 'range';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

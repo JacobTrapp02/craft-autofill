@@ -16,7 +16,7 @@ class MultiSelectFieldAdapter implements FieldAdapterInterface
         return 'multiSelect';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

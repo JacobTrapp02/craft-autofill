@@ -33,7 +33,7 @@ class AddressesFieldAdapter implements FieldAdapterInterface
         return 'addresses';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return false;
     }

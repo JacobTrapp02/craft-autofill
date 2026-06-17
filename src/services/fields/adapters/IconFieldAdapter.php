@@ -23,7 +23,7 @@ class IconFieldAdapter implements FieldAdapterInterface
         return 'icon';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

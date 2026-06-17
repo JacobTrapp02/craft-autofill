@@ -35,7 +35,7 @@ use yii\base\Event;
  */
 class AutofillPlugin extends Plugin
 {
-    public const EDITION_FREE = 'free';
+    public const EDITION_LITE = 'lite';
     public const EDITION_PRO = 'pro';
 
     public string $schemaVersion = '1.0.0';
@@ -44,7 +44,7 @@ class AutofillPlugin extends Plugin
     public static function editions(): array
     {
         return [
-            self::EDITION_FREE,
+            self::EDITION_LITE,
             self::EDITION_PRO,
         ];
     }

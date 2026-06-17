@@ -16,7 +16,7 @@ class DateFieldAdapter implements FieldAdapterInterface
         return 'date';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

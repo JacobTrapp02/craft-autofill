@@ -16,7 +16,7 @@ class LightswitchFieldAdapter implements FieldAdapterInterface
         return 'lightswitch';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

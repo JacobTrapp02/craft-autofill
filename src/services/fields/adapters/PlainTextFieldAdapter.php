@@ -16,7 +16,7 @@ class PlainTextFieldAdapter implements FieldAdapterInterface
         return 'plainText';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

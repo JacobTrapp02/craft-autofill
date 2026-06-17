@@ -16,7 +16,7 @@ class RadioButtonsFieldAdapter implements FieldAdapterInterface
         return 'radioButtons';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

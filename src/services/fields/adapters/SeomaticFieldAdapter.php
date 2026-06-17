@@ -36,7 +36,7 @@ class SeomaticFieldAdapter implements FieldAdapterInterface
         return 'seomatic';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

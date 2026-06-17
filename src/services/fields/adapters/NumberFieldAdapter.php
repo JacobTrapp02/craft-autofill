@@ -16,7 +16,7 @@ class NumberFieldAdapter implements FieldAdapterInterface
         return 'number';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

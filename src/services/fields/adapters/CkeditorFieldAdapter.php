@@ -15,7 +15,7 @@ class CkeditorFieldAdapter implements FieldAdapterInterface
         return 'ckeditor';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

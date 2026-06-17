@@ -16,7 +16,7 @@ class ButtonGroupFieldAdapter implements FieldAdapterInterface
         return 'buttonGroup';
     }
 
-    public function isAvailableInFreeVersion(): bool
+    public function isAvailableInLiteVersion(): bool
     {
         return true;
     }

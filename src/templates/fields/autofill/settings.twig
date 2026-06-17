@@ -44,7 +44,7 @@
 {% for supportedField in supportedFields %}
     {% set fieldName = supportedField.name ?? '' %}
     {% set fieldHandle = supportedField.handle ?? '' %}
-    {% set requiresPro = not isProEdition and not (supportedField.availableInFreeVersion ?? false) %}
+    {% set requiresPro = not isProEdition and not (supportedField.availableInLiteVersion ?? false) %}
     {% set optionLabel = fieldName %}
     {% if fieldHandle != '' %}
         {% set optionLabel = fieldName ~ ' (' ~ fieldHandle ~ ')' %}
