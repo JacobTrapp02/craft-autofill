@@ -98,8 +98,13 @@ class FieldDiscoveryService extends Component
      */
     public function describeSupportedField(FieldInterface $field, string $adapterKey, bool $availableInLiteVersion): array
     {
+        $layoutElementUid = trim((string)($field->layoutElement->uid ?? ''));
+        $fieldUid = trim((string)($field->uid ?? ''));
+
         $meta = [
-            'uid' => (string)($field->uid ?? ''),
+            'uid' => $layoutElementUid !== '' ? $layoutElementUid : $fieldUid,
+            'fieldUid' => $fieldUid,
+            'layoutElementUid' => $layoutElementUid,
             'handle' => (string)($field->handle ?? ''),
             'name' => (string)($field->name ?? ''),
             'type' => $field::class,

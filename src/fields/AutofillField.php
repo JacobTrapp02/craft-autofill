@@ -117,6 +117,7 @@ class AutofillField extends Field
     public function validateRows(): void
     {
         $this->rows = $this->normalizeRows($this->rows);
+        $this->rows = $this->canonicalizeRowFieldSelections($this->rows);
 
         foreach ($this->rows as $index => $row) {
             $rowNumber = $index + 1;
@@ -142,6 +143,7 @@ class AutofillField extends Field
     public function validateContextRows(): void
     {
         $this->contextRows = $this->normalizeContextRows($this->contextRows);
+        $this->contextRows = $this->canonicalizeContextFieldSelections($this->contextRows);
 
         foreach ($this->contextRows as $index => $row) {
             $rowNumber = $index + 1;
@@ -542,7 +544,9 @@ class AutofillField extends Field
                 continue;
             }
 
-            $field = Craft::$app->getFields()->getFieldByUid($uid);
+            $field = AutofillPlugin::getInstance()
+                ->getEntryTypeFieldResolverService()
+                ->resolveByEntryTypeUid($this->entryTypeUid, $uid);
             if (!$field instanceof FieldInterface) {
                 continue;
             }
@@ -577,7 +581,9 @@ class AutofillField extends Field
             return true;
         }
 
-        $field = Craft::$app->getFields()->getFieldByUid($fieldUid);
+        $field = AutofillPlugin::getInstance()
+            ->getEntryTypeFieldResolverService()
+            ->resolveByEntryTypeUid($this->entryTypeUid, $fieldUid);
         if (!$field instanceof FieldInterface) {
             return true;
         }
@@ -610,5 +616,45 @@ class AutofillField extends Field
         }
 
         return false;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function canonicalizeRowFieldSelections(array $rows): array
+    {
+        $resolver = AutofillPlugin::getInstance()->getEntryTypeFieldResolverService();
+
+        foreach ($rows as $index => $row) {
+            $targetFieldUid = trim((string)($row['targetFieldUid'] ?? ''));
+            if ($targetFieldUid === '') {
+                continue;
+            }
+
+            $rows[$index]['targetFieldUid'] = $resolver->canonicalizeByEntryTypeUid($this->entryTypeUid, $targetFieldUid);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function canonicalizeContextFieldSelections(array $rows): array
+    {
+        $resolver = AutofillPlugin::getInstance()->getEntryTypeFieldResolverService();
+
+        foreach ($rows as $index => $row) {
+            $fieldUid = trim((string)($row['fieldUid'] ?? ''));
+            if ($fieldUid === '') {
+                continue;
+            }
+
+            $rows[$index]['fieldUid'] = $resolver->canonicalizeByEntryTypeUid($this->entryTypeUid, $fieldUid);
+        }
+
+        return $rows;
     }
 }

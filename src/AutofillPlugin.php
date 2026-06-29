@@ -16,6 +16,7 @@ use jtdev\craftautofill\services\entries\BulkAutofillService;
 use jtdev\craftautofill\services\entries\EntrySuggestionApplyService;
 use jtdev\craftautofill\services\fields\FieldAdapterService;
 use jtdev\craftautofill\services\fields\FieldDiscoveryService;
+use jtdev\craftautofill\services\fields\EntryTypeFieldResolverService;
 use yii\base\Event;
 
 /**
@@ -29,6 +30,7 @@ use yii\base\Event;
  * @method EntrySuggestionApplyService getEntrySuggestionApplyService()
  * @method FieldAdapterService getFieldAdapterService()
  * @method FieldDiscoveryService getFieldDiscoveryService()
+ * @method EntryTypeFieldResolverService getEntryTypeFieldResolverService()
  * @author JTDev <jake.trapp02@gmail.com>
  * @copyright JTDev
  * @license https://craftcms.github.io/license/ Craft License
@@ -59,6 +61,7 @@ class AutofillPlugin extends Plugin
                 'entrySuggestionApplyService' => EntrySuggestionApplyService::class,
                 'fieldAdapterService' => FieldAdapterService::class,
                 'fieldDiscoveryService' => FieldDiscoveryService::class,
+                'entryTypeFieldResolverService' => EntryTypeFieldResolverService::class,
             ],
         ];
     }
@@ -120,6 +123,11 @@ class AutofillPlugin extends Plugin
     public function getFieldDiscoveryService(): FieldDiscoveryService
     {
         return $this->get('fieldDiscoveryService');
+    }
+
+    public function getEntryTypeFieldResolverService(): EntryTypeFieldResolverService
+    {
+        return $this->get('entryTypeFieldResolverService');
     }
 
     public function isProEdition(): bool

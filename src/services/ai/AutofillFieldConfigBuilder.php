@@ -66,7 +66,10 @@ class AutofillFieldConfigBuilder extends Component
             $entryType = Craft::$app->getEntries()->getEntryTypeByUid($field->entryTypeUid);
 
             foreach ($entryType?->getFieldLayout()->getCustomFields() ?? [] as $layoutField) {
-                $uid = (string)($layoutField->uid ?? '');
+                $uid = trim((string)($layoutField->layoutElement->uid ?? ''));
+                if ($uid === '') {
+                    $uid = trim((string)($layoutField->uid ?? ''));
+                }
                 if ($uid === '') {
                     continue;
                 }

@@ -11,6 +11,7 @@ use craft\fields\Table as TableField;
 use craft\helpers\Cp;
 use craft\helpers\Json;
 use jtdev\craftautofill\AutofillPlugin;
+use jtdev\craftautofill\fields\AutofillField;
 use jtdev\craftautofill\models\ai\AiGenerationRequest;
 use jtdev\craftautofill\models\ai\AiGenerationResult;
 use Throwable;
@@ -70,6 +71,7 @@ class AiResponseNormalizer extends Component
         try {
             $parsed = $this->parseSuggestionJson($rawResponse);
             $config = $this->fieldConfigBuilder->buildFromFieldId($fieldId);
+            $autofillField = $this->resolveAutofillField($fieldId);
         } catch (InvalidArgumentException $exception) {
             return new AiGenerationResult([
                 'success' => false,
@@ -121,13 +123,14 @@ class AiResponseNormalizer extends Component
                 $validationErrors[] = 'Suggestion field could not be matched to a configured field.';
             }
 
-            $value = $this->normalizeSuggestionValue($targetFieldUid, $rawValue, $fieldContract);
+            $value = $this->normalizeSuggestionValue($autofillField, $targetFieldUid, $rawValue, $fieldContract);
             $validationErrors = array_merge(
                 $validationErrors,
-                $this->validateSuggestionValue($targetFieldUid, $rawValue, $value, $fieldContract)
+                $this->validateSuggestionValue($autofillField, $targetFieldUid, $rawValue, $value, $fieldContract)
             );
             [$displayValue, $displayValueIsLabel] = $this->resolveDisplayValue($value, $fieldContract);
             $reviewEditor = $this->buildReviewEditorPayload(
+                $autofillField,
                 $targetFieldUid,
                 $value,
                 $fieldContract,
@@ -337,13 +340,13 @@ class AiResponseNormalizer extends Component
         return $orderedTargetFields[$index] ?? null;
     }
 
-    private function normalizeSuggestionValue(string $fieldUid, mixed $value, array $fieldContract): mixed
+    private function normalizeSuggestionValue(?AutofillField $autofillField, string $fieldUid, mixed $value, array $fieldContract): mixed
     {
         if ($fieldUid === '') {
             return $this->normalizeUnmatchedSuggestionValue($value);
         }
 
-        $field = $this->getCustomField($fieldUid);
+        $field = $this->getCustomField($autofillField, $fieldUid);
         if ($field instanceof FieldInterface) {
             $adapter = AutofillPlugin::getInstance()->getFieldAdapterService()->getAdapterForField($field);
             if ($adapter !== null) {
@@ -379,10 +382,10 @@ class AiResponseNormalizer extends Component
     /**
      * @return string[]
      */
-    private function validateSuggestionValue(string $fieldUid, mixed $rawValue, mixed $normalizedValue, array $fieldContract): array
+    private function validateSuggestionValue(?AutofillField $autofillField, string $fieldUid, mixed $rawValue, mixed $normalizedValue, array $fieldContract): array
     {
         $errors = [];
-        $field = $this->getCustomField($fieldUid);
+        $field = $this->getCustomField($autofillField, $fieldUid);
 
         if ($field instanceof FieldInterface) {
             $adapter = AutofillPlugin::getInstance()->getFieldAdapterService()->getAdapterForField($field);
@@ -398,6 +401,7 @@ class AiResponseNormalizer extends Component
      * @return array<string, mixed>
      */
     private function buildReviewEditorPayload(
+        ?AutofillField $autofillField,
         string $fieldUid,
         mixed $normalizedValue,
         array $fieldContract,
@@ -493,7 +497,7 @@ class AiResponseNormalizer extends Component
         }
 
         if ($adapterKey === 'table') {
-            return $this->buildTableReviewEditorPayload($fieldUid, $normalizedValue);
+            return $this->buildTableReviewEditorPayload($autofillField, $fieldUid, $normalizedValue, $fieldContract);
         }
 
         if ($adapterKey === 'range') {
@@ -545,10 +549,10 @@ class AiResponseNormalizer extends Component
     /**
      * @return array<string, mixed>
      */
-    private function buildTableReviewEditorPayload(string $fieldUid, mixed $normalizedValue): array
+    private function buildTableReviewEditorPayload(?AutofillField $autofillField, string $fieldUid, mixed $normalizedValue, array $fieldContract): array
     {
         $previewHtml = '';
-        $field = $this->getCustomField($fieldUid);
+        $field = $this->getCustomField($autofillField, $fieldUid);
 
         if ($field instanceof TableField) {
             $previewHtml = $this->tablePreviewHtmlForValue($field, $normalizedValue);
@@ -643,13 +647,25 @@ class AiResponseNormalizer extends Component
         return [$normalizedValue, false];
     }
 
-    private function getCustomField(string $fieldUid): ?FieldInterface
+    private function getCustomField(?AutofillField $autofillField, string $fieldUid): ?FieldInterface
     {
         if ($fieldUid === '' || str_starts_with($fieldUid, '__native__:')) {
             return null;
         }
 
-        return Craft::$app->getFields()->getFieldByUid($fieldUid);
+        if (!$autofillField instanceof AutofillField) {
+            return null;
+        }
+
+        return AutofillPlugin::getInstance()
+            ->getEntryTypeFieldResolverService()
+            ->resolveForAutofillField($autofillField, $fieldUid);
+    }
+
+    private function resolveAutofillField(int $fieldId): ?AutofillField
+    {
+        $field = Craft::$app->getFields()->getFieldById($fieldId);
+        return $field instanceof AutofillField ? $field : null;
     }
 
     private function normalizeByContract(mixed $value, array $fieldContract): mixed

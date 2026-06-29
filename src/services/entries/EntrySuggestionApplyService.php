@@ -9,6 +9,7 @@ use craft\base\Component;
 use craft\elements\Entry;
 use DateTime;
 use jtdev\craftautofill\AutofillPlugin;
+use jtdev\craftautofill\fields\AutofillField;
 use RuntimeException;
 
 class EntrySuggestionApplyService extends Component
@@ -21,6 +22,11 @@ class EntrySuggestionApplyService extends Component
     {
         if ($entryId <= 0) {
             throw new RuntimeException('Entry ID is required to apply suggestions.');
+        }
+
+        $autofillField = Craft::$app->getFields()->getFieldById($fieldId);
+        if (!$autofillField instanceof AutofillField) {
+            throw new RuntimeException(sprintf('Autofill field %d could not be found.', $fieldId));
         }
 
         $entry = Craft::$app->getElements()->getElementById($entryId, Entry::class, $siteId);
@@ -42,7 +48,11 @@ class EntrySuggestionApplyService extends Component
         if (str_starts_with($targetFieldUid, '__native__:')) {
             $this->applyNativeFieldValue($entry, $targetFieldUid, $appliedValue);
         } else {
-            $field = $targetFieldUid !== '' ? Craft::$app->getFields()->getFieldByUid($targetFieldUid) : null;
+            $field = $targetFieldUid !== ''
+                ? AutofillPlugin::getInstance()
+                    ->getEntryTypeFieldResolverService()
+                    ->resolveForAutofillField($autofillField, $targetFieldUid)
+                : null;
             if ($field === null) {
                 throw new RuntimeException(sprintf('Field UID "%s" could not be found.', $targetFieldUid));
             }
