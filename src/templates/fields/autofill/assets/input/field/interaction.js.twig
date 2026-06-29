@@ -73,7 +73,7 @@
         }
     };
 
-    runtime.prepareInputForInteraction = (input) => {
+    runtime.prepareInputForInteraction = (input, options = {}) => {
         activateTabForInput(input);
         scrollFieldIntoTopView(input);
         const anchor = runtime.getInteractionAnchor(input);
@@ -97,12 +97,12 @@
         if (typeof input.focus === 'function') {
             input.focus();
         }
-        if (typeof runtime.positionActiveReviewModal === 'function') {
-            runtime.positionActiveReviewModal(input);
+        if (typeof options.positionReviewModal === 'function') {
+            options.positionReviewModal(input);
         }
     };
 
-    runtime.focusMatchedField = (matchedHandle) => {
+    runtime.focusMatchedField = (matchedHandle, options = {}) => {
         if (!matchedHandle) {
             return;
         }
@@ -110,6 +110,6 @@
         if (!(input instanceof HTMLElement)) {
             return;
         }
-        runtime.prepareInputForInteraction(input);
+        runtime.prepareInputForInteraction(input, options);
     };
 })();

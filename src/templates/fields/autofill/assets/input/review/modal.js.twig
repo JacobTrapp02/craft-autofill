@@ -209,7 +209,9 @@
                 suggestion: current,
                 container: modalState.editor,
             });
-            focusMatchedField(current.matchedHandle);
+            focusMatchedField(current.matchedHandle, {
+                positionReviewModal: positionBelowField,
+            });
         };
 
         const clear = () => {

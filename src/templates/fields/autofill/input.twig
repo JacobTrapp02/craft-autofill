@@ -13,14 +13,21 @@
 {% set showUserPromptInput = field.showUserPromptInput ?? true %}
 {% set defaultActionLabel = isTestMode ? 'Generate' : 'Autofill' %}
 {% set actionButtonLabel = field.actionButtonLabel|trim ?: defaultActionLabel %}
+{% set autofillDomId = field.id ?? field.handle ?? 'autofill' %}
+{% set previewConfigJson = previewConfig|json_encode %}
 
-<div class="autofill-runtime" data-autofill-runtime>
+<div
+    class="autofill-runtime"
+    data-autofill-runtime
+    data-autofill-field-id="{{ field.id ?? '' }}"
+    data-autofill-config="{{ previewConfigJson|e('html_attr') }}"
+>
     <div class="autofill-runtime__primary">
         {% if showUserPromptInput %}
             <div class="field">
                 <div class="input ltr">
                     <textarea
-                        id="autofill-user-prompt-{{ field.handle }}"
+                        id="autofill-user-prompt-{{ autofillDomId }}"
                         class="text fullwidth"
                         rows="5"
                         data-autofill-user-prompt
@@ -47,14 +54,14 @@
 
         <div class="field">
             <div class="heading">
-                <label for="autofill-response-input-{{ field.handle }}">Test Response Input</label>
+                <label for="autofill-response-input-{{ autofillDomId }}">Test Response Input</label>
                 <div class="instructions">
                     <p>Paste AI JSON response here, then click Parse + Start Review.</p>
                 </div>
             </div>
             <div class="input ltr">
                 <textarea
-                    id="autofill-response-input-{{ field.handle }}"
+                    id="autofill-response-input-{{ autofillDomId }}"
                     class="text fullwidth code"
                     rows="8"
                     data-autofill-response-input
@@ -545,7 +552,6 @@
 {% endcss %}
 
 {% js %}
-window.__autofillPreviewConfig = {{ previewConfig|json_encode|raw }};
 {% include 'autofill/fields/autofill/assets/input/api.js.twig' %}
 {% include 'autofill/fields/autofill/assets/input/field/locator.js.twig' %}
 {% include 'autofill/fields/autofill/assets/input/field/interaction.js.twig' %}
