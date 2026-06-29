@@ -5,8 +5,11 @@ namespace jtdev\craftautofill;
 use Craft;
 use craft\base\Model;
 use craft\base\Plugin;
+use craft\events\EntryTypeEvent;
 use craft\events\RegisterComponentTypesEvent;
 use craft\helpers\App;
+use craft\models\EntryType;
+use craft\services\Entries;
 use craft\services\Fields;
 use jtdev\craftautofill\fields\AutofillField;
 use jtdev\craftautofill\models\Settings;
@@ -17,7 +20,9 @@ use jtdev\craftautofill\services\entries\EntrySuggestionApplyService;
 use jtdev\craftautofill\services\fields\FieldAdapterService;
 use jtdev\craftautofill\services\fields\FieldDiscoveryService;
 use jtdev\craftautofill\services\fields\EntryTypeFieldResolverService;
+use RuntimeException;
 use yii\base\Event;
+use yii\base\ModelEvent;
 
 /**
  * Autofill plugin
@@ -180,6 +185,74 @@ class AutofillPlugin extends Plugin
                 $event->types[] = AutofillField::class;
             }
         );
+
+        Event::on(
+            EntryType::class,
+            EntryType::EVENT_BEFORE_VALIDATE,
+            static function(ModelEvent $event): void {
+                $entryType = $event->sender;
+                if (!$entryType instanceof EntryType) {
+                    return;
+                }
+
+                self::addAutofillEntryTypeCompatibilityErrors($entryType);
+            }
+        );
+
+        Event::on(
+            Entries::class,
+            Entries::EVENT_BEFORE_SAVE_ENTRY_TYPE,
+            static function(EntryTypeEvent $event): void {
+                $messages = self::addAutofillEntryTypeCompatibilityErrors($event->entryType);
+                if ($messages !== []) {
+                    throw new RuntimeException(implode(' ', $messages));
+                }
+            }
+        );
+    }
+
+    /**
+     * @return string[]
+     */
+    private static function addAutofillEntryTypeCompatibilityErrors(EntryType $entryType): array
+    {
+        $expectedEntryTypeUid = trim((string)($entryType->uid ?? ''));
+        if ($expectedEntryTypeUid === '') {
+            return [];
+        }
+
+        $fieldLayout = $entryType->getFieldLayout();
+        $messages = [];
+        foreach ($fieldLayout->getCustomFields() as $field) {
+            if (!$field instanceof AutofillField) {
+                continue;
+            }
+
+            $configuredEntryTypeUid = trim($field->entryTypeUid);
+            if ($configuredEntryTypeUid === $expectedEntryTypeUid) {
+                continue;
+            }
+
+            $fieldLabel = trim((string)($field->name ?? ''));
+            $message = $fieldLabel !== ''
+                ? sprintf(
+                    'Autofill field "%s" is configured for a different entry type and cannot be added here.',
+                    $fieldLabel
+                )
+                : 'An Autofill field is configured for a different entry type and cannot be added here.';
+
+            $messages[] = $message;
+
+            if (!in_array($message, $entryType->getErrors('fieldLayout'), true)) {
+                $entryType->addError('fieldLayout', $message);
+            }
+
+            if (!in_array($message, $fieldLayout->getErrors('customFields'), true)) {
+                $fieldLayout->addError('customFields', $message);
+            }
+        }
+
+        return $messages;
     }
 
     /**
