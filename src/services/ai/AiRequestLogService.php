@@ -40,6 +40,26 @@ class AiRequestLogService extends Component
         }
     }
 
+    public function hasSuccessfulEntryRun(int $fieldId, int $entryId, ?int $siteId = null): bool
+    {
+        if ($fieldId <= 0 || $entryId <= 0) {
+            return false;
+        }
+
+        $query = AiRequestLogRecord::find()
+            ->where([
+                'fieldId' => $fieldId,
+                'entryId' => $entryId,
+                'success' => true,
+            ]);
+
+        if ($siteId !== null && $siteId > 0) {
+            $query->andWhere(['siteId' => $siteId]);
+        }
+
+        return $query->exists();
+    }
+
     private function saveNewRecord(array $attributes): ?AiRequestLogRecord
     {
         $model = new AiRequestLog($this->filterKnownAttributes($attributes));

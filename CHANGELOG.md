@@ -1,4 +1,7 @@
 # Release Notes for Autofill
+## In Progress
+- Helper method for whether a specific autofill field and entry were successfully completed already
+
 ## 1.0.3
 - CP page added to call autofill in bulk. Works with the craft queue system. Extendedable from other plugins as well
 - CP page to shows the AI calls
