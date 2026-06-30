@@ -10,6 +10,7 @@ use craft\elements\Entry;
 use craft\helpers\Json;
 use jtdev\craftautofill\AutofillPlugin;
 use jtdev\craftautofill\fields\AutofillField;
+use jtdev\craftautofill\jobs\RunAutofillEntryJob;
 use jtdev\craftautofill\models\ai\OpenAiConfig;
 use RuntimeException;
 use Throwable;
@@ -27,7 +28,7 @@ class BulkAutofillService extends Component
         string $userPrompt = '',
         string $source = 'bulk',
         ?callable $onStart = null,
-        ?callable $onEntryProcessed = null
+        ?callable $onEntryProcessed = null,
     ): array {
         if (!AutofillPlugin::getInstance()->isProEdition()) {
             throw new RuntimeException('Bulk Autofill is only available in Autofill Pro.');
@@ -75,6 +76,134 @@ class BulkAutofillService extends Component
             'failed' => $failed,
             'suggestionsApplied' => $suggestionsApplied,
         ];
+    }
+
+    /**
+     * Queues Autofill jobs for one Autofill field across one or more entries.
+     *
+     * @return array{fieldId:int,entries:array<int,array{entryId:int,queued:bool,jobId:mixed,error:string|null}>,total:int,queued:int,failed:int}
+     */
+    public function queue(
+        ?int $fieldId,
+        ?string $fieldSlug,
+        string|array $entryIds,
+        ?int $siteId = null,
+        string $userPrompt = '',
+        string $source = 'bulk-queue',
+        ?callable $onStart = null,
+        ?callable $onEntryQueued = null,
+    ): array {
+        if (!AutofillPlugin::getInstance()->isProEdition()) {
+            throw new RuntimeException('Bulk Autofill is only available in Autofill Pro.');
+        }
+
+        $ids = is_array($entryIds) ? $this->normalizeEntryIds($entryIds) : $this->parseEntryIds($entryIds);
+        if ($ids === []) {
+            throw new RuntimeException('No valid entry IDs were provided.');
+        }
+
+        $field = $this->resolveAutofillField($fieldId, $fieldSlug);
+        $resolvedFieldId = (int)$field->id;
+        $entries = [];
+        $queued = 0;
+        $failed = 0;
+
+        if ($onStart !== null) {
+            $onStart($resolvedFieldId, count($ids));
+        }
+
+        foreach ($ids as $entryId) {
+            try {
+                $jobId = $this->queueForEntry($resolvedFieldId, null, $entryId, $siteId, $userPrompt, $source);
+                $result = [
+                    'entryId' => $entryId,
+                    'queued' => true,
+                    'jobId' => $jobId,
+                    'error' => null,
+                ];
+                $queued++;
+            } catch (Throwable $exception) {
+                $result = [
+                    'entryId' => $entryId,
+                    'queued' => false,
+                    'jobId' => null,
+                    'error' => $exception->getMessage(),
+                ];
+                $failed++;
+            }
+
+            $entries[] = $result;
+
+            if ($onEntryQueued !== null) {
+                $onEntryQueued($result);
+            }
+        }
+
+        return [
+            'fieldId' => $resolvedFieldId,
+            'entries' => $entries,
+            'total' => count($ids),
+            'queued' => $queued,
+            'failed' => $failed,
+        ];
+    }
+
+    /**
+     * Queues Autofill for a single entry and field.
+     */
+    public function queueForEntry(
+        ?int $fieldId,
+        ?string $fieldSlug,
+        int $entryId,
+        ?int $siteId = null,
+        string $userPrompt = '',
+        string $source = 'queue',
+    ): mixed {
+        if (!AutofillPlugin::getInstance()->isProEdition()) {
+            throw new RuntimeException('Bulk Autofill is only available in Autofill Pro.');
+        }
+
+        if ($entryId <= 0) {
+            throw new RuntimeException('A valid entry ID is required.');
+        }
+
+        $field = $this->resolveAutofillField($fieldId, $fieldSlug);
+
+        return Craft::$app->getQueue()->push(new RunAutofillEntryJob([
+            'fieldId' => (int)$field->id,
+            'entryId' => $entryId,
+            'siteId' => $siteId,
+            'userPrompt' => $userPrompt,
+            'source' => $source,
+        ]));
+    }
+
+    /**
+     * Runs Autofill immediately for a single entry and field.
+     *
+     * @return array{entryId:int,success:bool,suggestionsApplied:int,error:string|null}
+     */
+    public function runForEntry(
+        ?int $fieldId,
+        ?string $fieldSlug,
+        int $entryId,
+        ?int $siteId = null,
+        string $userPrompt = '',
+        string $source = 'api',
+    ): array {
+        if (!AutofillPlugin::getInstance()->isProEdition()) {
+            throw new RuntimeException('Bulk Autofill is only available in Autofill Pro.');
+        }
+
+        if ($entryId <= 0) {
+            throw new RuntimeException('A valid entry ID is required.');
+        }
+
+        $field = $this->resolveAutofillField($fieldId, $fieldSlug);
+        $resolvedFieldId = (int)$field->id;
+        $modelConfig = $this->resolveModelConfigForField($field);
+
+        return $this->processEntry($resolvedFieldId, $entryId, $siteId, $modelConfig, $userPrompt, $source);
     }
 
     /**
@@ -189,7 +318,7 @@ class BulkAutofillService extends Component
         ?int $siteId,
         OpenAiConfig $modelConfig,
         string $userPrompt,
-        string $source
+        string $source,
     ): array {
         $startedAt = microtime(true);
         $logId = null;

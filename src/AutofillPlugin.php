@@ -7,19 +7,21 @@ use craft\base\Model;
 use craft\base\Plugin;
 use craft\events\EntryTypeEvent;
 use craft\events\RegisterComponentTypesEvent;
+use craft\events\RegisterUrlRulesEvent;
 use craft\helpers\App;
 use craft\models\EntryType;
 use craft\services\Entries;
 use craft\services\Fields;
+use craft\web\UrlManager;
 use jtdev\craftautofill\fields\AutofillField;
 use jtdev\craftautofill\models\Settings;
 use jtdev\craftautofill\services\ai\AiRequestLogService;
 use jtdev\craftautofill\services\ai\AiService;
 use jtdev\craftautofill\services\entries\BulkAutofillService;
 use jtdev\craftautofill\services\entries\EntrySuggestionApplyService;
+use jtdev\craftautofill\services\fields\EntryTypeFieldResolverService;
 use jtdev\craftautofill\services\fields\FieldAdapterService;
 use jtdev\craftautofill\services\fields\FieldDiscoveryService;
-use jtdev\craftautofill\services\fields\EntryTypeFieldResolverService;
 use RuntimeException;
 use yii\base\Event;
 use yii\base\ModelEvent;
@@ -47,6 +49,7 @@ class AutofillPlugin extends Plugin
 
     public string $schemaVersion = '1.0.0';
     public bool $hasCpSettings = true;
+    public bool $hasCpSection = true;
 
     public static function editions(): array
     {
@@ -135,6 +138,24 @@ class AutofillPlugin extends Plugin
         return $this->get('entryTypeFieldResolverService');
     }
 
+    public function getCpNavItem(): ?array
+    {
+        $item = parent::getCpNavItem();
+        if ($item === null) {
+            return null;
+        }
+
+        $item['url'] = 'autofill/bulk';
+        $item['subnav'] = [
+            'bulk' => [
+                'label' => Craft::t('autofill', 'Bulk Autofill'),
+                'url' => 'autofill/bulk',
+            ],
+        ];
+
+        return $item;
+    }
+
     public function isProEdition(): bool
     {
         return $this->is(self::EDITION_PRO);
@@ -178,6 +199,15 @@ class AutofillPlugin extends Plugin
 
     private function attachEventHandlers(): void
     {
+        Event::on(
+            UrlManager::class,
+            UrlManager::EVENT_REGISTER_CP_URL_RULES,
+            static function(RegisterUrlRulesEvent $event): void {
+                $event->rules['autofill'] = 'autofill/bulk/index';
+                $event->rules['autofill/bulk'] = 'autofill/bulk/index';
+            }
+        );
+
         Event::on(
             Fields::class,
             Fields::EVENT_REGISTER_FIELD_TYPES,

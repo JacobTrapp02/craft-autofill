@@ -16,6 +16,7 @@ class BulkController extends Controller
     public string $entryIds = '';
     public ?int $siteId = null;
     public string $userPrompt = '';
+    public bool $runNow = false;
 
     public function options($actionID): array
     {
@@ -25,6 +26,7 @@ class BulkController extends Controller
             'entryIds',
             'siteId',
             'userPrompt',
+            'runNow',
         ]);
     }
 
@@ -40,28 +42,67 @@ class BulkController extends Controller
         }
 
         try {
-            $result = $plugin->getBulkAutofillService()->run(
+            if ($this->runNow) {
+                $result = $plugin->getBulkAutofillService()->run(
+                    $this->fieldId,
+                    $this->fieldSlug,
+                    $this->entryIds,
+                    $this->siteId,
+                    $this->userPrompt,
+                    'console-bulk',
+                    function(int $fieldId, int $total): void {
+                        $this->stdout(sprintf(
+                            "Running Autofill field %d for %d entr%s.\n",
+                            $fieldId,
+                            $total,
+                            $total === 1 ? 'y' : 'ies'
+                        ));
+                    },
+                    function(array $entryResult): void {
+                        if ($entryResult['success']) {
+                            $this->stdout(sprintf(
+                                "[OK] Entry %d: applied %d suggestion%s.\n",
+                                $entryResult['entryId'],
+                                $entryResult['suggestionsApplied'],
+                                $entryResult['suggestionsApplied'] === 1 ? '' : 's'
+                            ));
+                            return;
+                        }
+
+                        $this->stderr(sprintf("[FAIL] Entry %d: %s\n", $entryResult['entryId'], $entryResult['error']));
+                    }
+                );
+
+                $this->stdout("\nBulk Autofill complete.\n");
+                $this->stdout(sprintf("Entries requested: %d\n", $result['total']));
+                $this->stdout(sprintf("Entries succeeded: %d\n", $result['succeeded']));
+                $this->stdout(sprintf("Entries failed: %d\n", $result['failed']));
+                $this->stdout(sprintf("Suggestions applied: %d\n", $result['suggestionsApplied']));
+
+                return $result['failed'] > 0 ? ExitCode::UNSPECIFIED_ERROR : ExitCode::OK;
+            }
+
+            $result = $plugin->getBulkAutofillService()->queue(
                 $this->fieldId,
                 $this->fieldSlug,
                 $this->entryIds,
                 $this->siteId,
                 $this->userPrompt,
-                'console-bulk',
+                'console-bulk-queue',
                 function(int $fieldId, int $total): void {
                     $this->stdout(sprintf(
-                        "Running Autofill field %d for %d entr%s.\n",
+                        "Queueing Autofill field %d for %d entr%s.\n",
                         $fieldId,
                         $total,
                         $total === 1 ? 'y' : 'ies'
                     ));
                 },
                 function(array $entryResult): void {
-                    if ($entryResult['success']) {
+                    if ($entryResult['queued']) {
                         $this->stdout(sprintf(
-                            "[OK] Entry %d: applied %d suggestion%s.\n",
+                            "[QUEUED] Entry %d: job %s.\n",
                             $entryResult['entryId'],
-                            $entryResult['suggestionsApplied'],
-                            $entryResult['suggestionsApplied'] === 1 ? '' : 's'
+                            (string)$entryResult['jobId']
                         ));
                         return;
                     }
@@ -74,11 +115,10 @@ class BulkController extends Controller
             return ExitCode::UNSPECIFIED_ERROR;
         }
 
-        $this->stdout("\nBulk Autofill complete.\n");
+        $this->stdout("\nBulk Autofill queued.\n");
         $this->stdout(sprintf("Entries requested: %d\n", $result['total']));
-        $this->stdout(sprintf("Entries succeeded: %d\n", $result['succeeded']));
-        $this->stdout(sprintf("Entries failed: %d\n", $result['failed']));
-        $this->stdout(sprintf("Suggestions applied: %d\n", $result['suggestionsApplied']));
+        $this->stdout(sprintf("Entries queued: %d\n", $result['queued']));
+        $this->stdout(sprintf("Entries failed to queue: %d\n", $result['failed']));
 
         return $result['failed'] > 0 ? ExitCode::UNSPECIFIED_ERROR : ExitCode::OK;
     }

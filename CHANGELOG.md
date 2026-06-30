@@ -1,4 +1,6 @@
 # Release Notes for Autofill
+## In - Progress
+- CP page added to call autofill in bulk. Works with the craft queue system. Extendedable from other plugins as well
 
 ## 1.0.2
 - Fixed Autofill field targeting when a field’s label or handle is overridden within an entry type field layout.

@@ -1,0 +1,92 @@
+{% extends '_layouts/cp.twig' %}
+{% import '_includes/forms.twig' as forms %}
+
+{% set title = 'Bulk Autofill'|t('autofill') %}
+{% set selectedSubnavItem = 'bulk' %}
+{% set fullPageForm = true %}
+{% set submitButtonLabel = 'Queue Autofill'|t('autofill') %}
+
+{% set autofillFieldHelpTip %}
+    {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+        tooltipText: 'Choose the Autofill field configuration that should generate and apply suggestions.'|t('autofill')
+    } only %}
+{% endset %}
+{% set entriesHelpTip %}
+    {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+        tooltipText: 'Choose one or more entries. Use the section list in the selector to narrow the entry browser.'|t('autofill')
+    } only %}
+{% endset %}
+{% set siteHelpTip %}
+    {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+        tooltipText: 'Leave this set to the default entry site unless the selected entries should be processed for a specific site.'|t('autofill')
+    } only %}
+{% endset %}
+{% set userPromptHelpTip %}
+    {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+        tooltipText: 'Optional instructions to include with this bulk run.'|t('autofill')
+    } only %}
+{% endset %}
+
+{% block content %}
+    {{ actionInput('autofill/bulk/queue') }}
+    {{ redirectInput('autofill/bulk') }}
+
+    {% if not craft.app.plugins.getPlugin('autofill').isProEdition() %}
+        <p class="warning with-icon">
+            {{ 'Bulk Autofill is only available in Autofill Pro.'|t('autofill') }}
+        </p>
+    {% endif %}
+
+    <p class="light">
+        {{ 'Select the Autofill field to run, choose the entries that should be processed, then queue the jobs. Each selected entry will be processed separately by Craft’s queue.'|t('autofill') }}
+    </p>
+
+    {{ forms.selectField({
+        label: 'Autofill Field'|t('autofill') ~ autofillFieldHelpTip,
+        id: 'fieldId',
+        name: 'fieldId',
+        options: [{
+            label: autofillFieldOptions is empty
+                ? 'No Autofill fields are available.'|t('autofill')
+                : 'Select an Autofill field'|t('autofill'),
+            value: '',
+        }]|merge(autofillFieldOptions),
+        value: selectedFieldId,
+        required: true,
+        disabled: autofillFieldOptions is empty,
+    }) }}
+
+    {{ forms.elementSelectField({
+        label: 'Entries'|t('app') ~ entriesHelpTip,
+        id: 'entryIds',
+        name: 'entryIds',
+        elementType: 'craft\\elements\\Entry',
+        selectionLabel: 'Select entries'|t('autofill'),
+        sources: entrySources,
+        elements: selectedEntries,
+        viewMode: 'list',
+        showSiteMenu: true,
+        limit: null,
+        required: true,
+    }) }}
+
+    {{ forms.selectField({
+        label: 'Site'|t('app') ~ siteHelpTip,
+        id: 'siteId',
+        name: 'siteId',
+        options: siteOptions,
+        value: selectedSiteId,
+    }) }}
+
+    {{ forms.textareaField({
+        label: 'User Prompt'|t('autofill') ~ userPromptHelpTip,
+        id: 'userPrompt',
+        name: 'userPrompt',
+        value: userPrompt,
+        rows: 4,
+    }) }}
+{% endblock %}
+
+{% css %}
+{% include 'autofill/fields/autofill/assets/settings/index.css.twig' %}
+{% endcss %}
