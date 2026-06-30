@@ -1,5 +1,5 @@
 # Release Notes for Autofill
-## In Progress
+## 1.0.4
 - Helper method for whether a specific autofill field and entry were successfully completed already
 
 ## 1.0.3
