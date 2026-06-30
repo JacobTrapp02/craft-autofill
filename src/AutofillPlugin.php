@@ -151,6 +151,10 @@ class AutofillPlugin extends Plugin
                 'label' => Craft::t('autofill', 'Bulk Autofill'),
                 'url' => 'autofill/bulk',
             ],
+            'logs' => [
+                'label' => Craft::t('autofill', 'Logs'),
+                'url' => 'autofill/logs',
+            ],
         ];
 
         return $item;
@@ -205,6 +209,7 @@ class AutofillPlugin extends Plugin
             static function(RegisterUrlRulesEvent $event): void {
                 $event->rules['autofill'] = 'autofill/bulk/index';
                 $event->rules['autofill/bulk'] = 'autofill/bulk/index';
+                $event->rules['autofill/logs'] = 'autofill/logs/index';
             }
         );
 

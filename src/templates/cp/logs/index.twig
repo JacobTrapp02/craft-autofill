@@ -1,0 +1,174 @@
+{% extends '_layouts/cp.twig' %}
+
+{% set title = 'Autofill Logs'|t('autofill') %}
+{% set selectedSubnavItem = 'logs' %}
+
+{% paginate logsQuery.limit(50) as pageInfo, logs %}
+
+{% macro textValue(value) %}
+    {% if value is same as(null) or value == '' %}
+        <span class="light">{{ 'None'|t('app') }}</span>
+    {% else %}
+        {{ value }}
+    {% endif %}
+{% endmacro %}
+
+{% macro longValue(label, value) %}
+    <div class="autofill-log-detail">
+        <h3>{{ label }}</h3>
+        {% if value is same as(null) or value == '' %}
+            <p class="light">{{ 'None'|t('app') }}</p>
+        {% else %}
+            <pre><code>{{ value }}</code></pre>
+        {% endif %}
+    </div>
+{% endmacro %}
+
+{% import _self as logMacros %}
+
+{% block content %}
+    <p class="light">
+        {{ 'These logs are read from the existing Autofill AI request log table. New rows are created whenever Autofill records a request from the field UI, bulk queue jobs, or other Autofill execution paths.'|t('autofill') }}
+    </p>
+
+    {% if logs is empty %}
+        <p>{{ 'No Autofill logs have been recorded yet.'|t('autofill') }}</p>
+    {% else %}
+        <div class="tableview">
+            <table class="data fullwidth autofill-logs-table">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'ID'|t('app') }}</th>
+                        <th scope="col">{{ 'Date'|t('app') }}</th>
+                        <th scope="col">{{ 'Status'|t('app') }}</th>
+                        <th scope="col">{{ 'Field'|t('app') }}</th>
+                        <th scope="col">{{ 'Entry'|t('app') }}</th>
+                        <th scope="col">{{ 'Site'|t('app') }}</th>
+                        <th scope="col">{{ 'User'|t('app') }}</th>
+                        <th scope="col">{{ 'Provider'|t('autofill') }}</th>
+                        <th scope="col">{{ 'Model'|t('autofill') }}</th>
+                        <th scope="col">{{ 'Latency'|t('autofill') }}</th>
+                        <th scope="col">{{ 'Tokens'|t('autofill') }}</th>
+                        <th scope="col">{{ 'Details'|t('app') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                        <tr>
+                            <th scope="row" class="code">{{ log.id }}</th>
+                            <td>{{ log.dateCreated ? log.dateCreated|date('Y-m-d H:i:s') : '' }}</td>
+                            <td>
+                                {% if log.success %}
+                                    <span class="status green"></span>{{ 'Success'|t('app') }}
+                                {% else %}
+                                    <span class="status red"></span>{{ 'Failed'|t('app') }}
+                                {% endif %}
+                            </td>
+                            <td class="code">{{ logMacros.textValue(log.fieldId) }}</td>
+                            <td class="code">{{ logMacros.textValue(log.entryId) }}</td>
+                            <td class="code">{{ logMacros.textValue(log.siteId) }}</td>
+                            <td class="code">{{ logMacros.textValue(log.userId) }}</td>
+                            <td>{{ logMacros.textValue(log.provider) }}</td>
+                            <td>
+                                {{ logMacros.textValue(log.modelId) }}
+                                {% if log.reasoningEffort %}
+                                    <div class="light">{{ 'Reasoning: {reasoning}'|t('autofill', { reasoning: log.reasoningEffort }) }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if log.latencyMs is same as(null) %}
+                                    <span class="light">{{ 'None'|t('app') }}</span>
+                                {% else %}
+                                    {{ '{latency} ms'|t('autofill', { latency: log.latencyMs|number }) }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if log.totalTokens is same as(null) %}
+                                    <span class="light">{{ 'None'|t('app') }}</span>
+                                {% else %}
+                                    {{ log.totalTokens|number }}
+                                    <div class="light">
+                                        {{ 'In: {input}, Out: {output}'|t('autofill', {
+                                            input: log.inputTokens is same as(null) ? 'n/a' : log.inputTokens|number,
+                                            output: log.outputTokens is same as(null) ? 'n/a' : log.outputTokens|number,
+                                        }) }}
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <details class="autofill-log-details">
+                                    <summary>{{ 'View'|t('app') }}</summary>
+                                    <dl class="autofill-log-meta">
+                                        <dt>{{ 'Model Config UID'|t('autofill') }}</dt>
+                                        <dd class="code">{{ logMacros.textValue(log.modelConfigUid) }}</dd>
+                                        <dt>{{ 'Provider Response ID'|t('autofill') }}</dt>
+                                        <dd class="code">{{ logMacros.textValue(log.providerResponseId) }}</dd>
+                                        <dt>{{ 'Error Message'|t('app') }}</dt>
+                                        <dd>{{ logMacros.textValue(log.errorMessage) }}</dd>
+                                        <dt>{{ 'Date Updated'|t('app') }}</dt>
+                                        <dd>{{ log.dateUpdated ? log.dateUpdated|date('Y-m-d H:i:s') : '' }}</dd>
+                                        <dt>{{ 'UID'|t('app') }}</dt>
+                                        <dd class="code">{{ logMacros.textValue(log.uid) }}</dd>
+                                    </dl>
+                                    {{ logMacros.longValue('Request Prompt'|t('autofill'), log.requestPrompt) }}
+                                    {{ logMacros.longValue('Request Payload JSON'|t('autofill'), log.requestPayloadJson) }}
+                                    {{ logMacros.longValue('Response Raw Text'|t('autofill'), log.responseRawText) }}
+                                    {{ logMacros.longValue('Response Payload JSON'|t('autofill'), log.responsePayloadJson) }}
+                                </details>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% include '_includes/pagination.twig' with { pageInfo: pageInfo } only %}
+    {% endif %}
+{% endblock %}
+
+{% css %}
+.autofill-logs-table {
+    table-layout: auto;
+}
+
+.autofill-log-details summary {
+    cursor: pointer;
+}
+
+.autofill-log-meta {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 6px 14px;
+    margin: 12px 0;
+}
+
+.autofill-log-meta dt {
+    color: var(--gray-700);
+    font-weight: 600;
+}
+
+.autofill-log-meta dd {
+    margin: 0;
+}
+
+.autofill-log-detail {
+    margin-top: 14px;
+}
+
+.autofill-log-detail h3 {
+    margin: 0 0 6px;
+    font-size: 12px;
+}
+
+.autofill-log-detail pre {
+    overflow: auto;
+    max-width: 680px;
+    max-height: 260px;
+    margin: 0;
+    padding: 10px;
+    border: 1px solid var(--gray-200);
+    border-radius: 4px;
+    background: var(--gray-050);
+    white-space: pre-wrap;
+}
+{% endcss %}
