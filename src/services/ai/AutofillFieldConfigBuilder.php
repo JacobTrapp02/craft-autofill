@@ -9,6 +9,7 @@ use craft\base\Component;
 use craft\elements\Entry;
 use jtdev\craftautofill\AutofillPlugin;
 use jtdev\craftautofill\fields\AutofillField;
+use jtdev\craftautofill\services\fields\adapters\AbstractRelatedElementsFieldAdapter;
 use RuntimeException;
 
 class AutofillFieldConfigBuilder extends Component
@@ -28,6 +29,7 @@ class AutofillFieldConfigBuilder extends Component
         $fieldHandleByUid = [];
         $fieldAdapterKeyByUid = [];
         $contextValueByUid = [];
+        $currentValueByUid = [];
 
         foreach ($this->nativeFields() as $uid => $meta) {
             $fieldNameByUid[$uid] = $meta['name'];
@@ -83,7 +85,14 @@ class AutofillFieldConfigBuilder extends Component
                 $fieldNameByUid[$uid] = (string)($layoutField->name ?? $uid);
                 $fieldHandleByUid[$uid] = (string)($layoutField->handle ?? '');
                 $fieldAdapterKeyByUid[$uid] = $adapter->getKey();
-                $contextValueByUid[$uid] = $this->resolveCustomFieldContextValue($entry, $layoutField->handle ?? '', $layoutField, $adapter);
+                $rawValue = $this->resolveCustomFieldRawValue($entry, $layoutField->handle ?? '');
+                $contextValueByUid[$uid] = $this->resolveCustomFieldContextValue($rawValue, $layoutField, $adapter);
+                if (
+                    $adapter instanceof AbstractRelatedElementsFieldAdapter &&
+                    $this->relatedForceUseCurrentValues($rowPromptConfigByUid[$uid] ?? [])
+                ) {
+                    $currentValueByUid[$uid] = $adapter->getCurrentTitles($rawValue);
+                }
             }
         }
 
@@ -104,6 +113,7 @@ class AutofillFieldConfigBuilder extends Component
             'fieldContractsByUid' => $fieldContractsByUid,
             'fieldAdapterKeyByUid' => $fieldAdapterKeyByUid,
             'contextValueByUid' => $contextValueByUid,
+            'currentValueByUid' => $currentValueByUid,
         ];
     }
 
@@ -122,22 +132,28 @@ class AutofillFieldConfigBuilder extends Component
         return $resolved instanceof Entry ? $resolved : null;
     }
 
-    private function resolveCustomFieldContextValue(
-        ?Entry $entry,
-        mixed $handle,
-        mixed $layoutField,
-        mixed $adapter,
-    ): string {
+    private function resolveCustomFieldRawValue(?Entry $entry, mixed $handle): mixed
+    {
         if (!$entry instanceof Entry) {
-            return '';
+            return null;
         }
 
         $fieldHandle = trim((string)$handle);
         if ($fieldHandle === '') {
-            return '';
+            return null;
         }
 
-        $rawValue = $entry->getFieldValue($fieldHandle);
+        return $entry->getFieldValue($fieldHandle);
+    }
+
+    private function resolveCustomFieldContextValue(
+        mixed $rawValue,
+        mixed $layoutField,
+        mixed $adapter,
+    ): string {
+        if ($rawValue === null) {
+            return '';
+        }
 
         try {
             $adapterContextValue = trim((string)$adapter->getContextValue($layoutField, $rawValue));
@@ -222,7 +238,7 @@ class AutofillFieldConfigBuilder extends Component
     }
 
     /**
-     * @return array<string, array{name:string, handle:string, type:string, format?:string}>
+     * @return array<string, array{name:string, handle:string, type:string, adapter:string, format?:string}>
      */
     private function nativeFields(): array
     {
@@ -233,5 +249,25 @@ class AutofillFieldConfigBuilder extends Component
             '__native__:expiryDate' => ['name' => 'Expiration Date', 'handle' => 'expiryDate', 'type' => 'string', 'format' => 'date-time', 'adapter' => 'date'],
             '__native__:enabled' => ['name' => 'Enabled', 'handle' => 'enabled', 'type' => 'boolean', 'adapter' => 'lightswitch'],
         ];
+    }
+
+    private function relatedForceUseCurrentValues(array $row): bool
+    {
+        $related = is_array($row['related'] ?? null) ? $row['related'] : [];
+        $value = $related['forceUseCurrentValues'] ?? false;
+
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_numeric($value)) {
+            return (int)$value === 1;
+        }
+
+        if (is_string($value)) {
+            return in_array(strtolower($value), ['1', 'true', 'yes', 'on'], true);
+        }
+
+        return false;
     }
 }

@@ -147,7 +147,9 @@ class PromptPreviewController extends Controller
 
             $normalizedResult = $aiService->normalizeAutofillResponse(
                 Json::encode($generationResult->suggestions),
-                $fieldId
+                $fieldId,
+                $entryId > 0 ? $entryId : null,
+                $siteId
             );
 
             $isDevMode = Craft::$app->getConfig()->getGeneral()->devMode;

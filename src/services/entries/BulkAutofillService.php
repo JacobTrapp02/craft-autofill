@@ -374,7 +374,9 @@ class BulkAutofillService extends Component
 
             $normalizedResult = $aiService->normalizeAutofillResponse(
                 Json::encode($generationResult->suggestions),
-                $fieldId
+                $fieldId,
+                $entryId,
+                $siteId
             );
 
             if (!$normalizedResult->success) {

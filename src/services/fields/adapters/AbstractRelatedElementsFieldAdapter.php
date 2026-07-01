@@ -91,6 +91,14 @@ abstract class AbstractRelatedElementsFieldAdapter implements FieldAdapterInterf
         return implode(', ', $titles);
     }
 
+    /**
+     * @return string[]
+     */
+    public function getCurrentTitles(mixed $value): array
+    {
+        return $this->extractCurrentTitles($value);
+    }
+
     public function validateSuggestion(FieldInterface $field, mixed $value): bool
     {
         $decoded = $this->toArray($value);

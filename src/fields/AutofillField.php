@@ -432,7 +432,7 @@ class AutofillField extends Field
 
     /**
      * @param mixed $raw
-     * @return array{mode:string,topN:int}
+     * @return array{mode:string,topN:int,forceUseCurrentValues:bool}
      */
     private function normalizeRelatedRowConfig(mixed $raw): array
     {
@@ -450,6 +450,7 @@ class AutofillField extends Field
         return [
             'mode' => $mode,
             'topN' => $topN,
+            'forceUseCurrentValues' => $this->toBool($config['forceUseCurrentValues'] ?? false),
         ];
     }
 

@@ -55,9 +55,14 @@ class AiService extends Component
         return $this->promptBuilder->buildAutofillPromptPreview($userPrompt, $fieldId, $entryId, $siteId);
     }
 
-    public function normalizeAutofillResponse(string $rawResponse, int $fieldId): AiGenerationResult
+    public function normalizeAutofillResponse(
+        string $rawResponse,
+        int $fieldId,
+        ?int $entryId = null,
+        ?int $siteId = null,
+    ): AiGenerationResult
     {
-        return $this->responseNormalizer->normalizeAutofillResponse($rawResponse, $fieldId);
+        return $this->responseNormalizer->normalizeAutofillResponse($rawResponse, $fieldId, $entryId, $siteId);
     }
 
     public function generateFromRequest(AiGenerationRequest $request, Model $providerConfig): AiGenerationResult

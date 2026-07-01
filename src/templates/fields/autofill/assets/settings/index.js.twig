@@ -163,7 +163,17 @@
             : null;
         const selectedFieldType = fieldTypeByUid[select.value] || selectedOption?.dataset?.fieldType || '';
         const enabled = isRelatedFieldType(selectedFieldType);
+        const currentValuesToggle = row.querySelector('[data-related-current-values-toggle]');
+        const currentValuesInputs = row.querySelectorAll('[data-related-current-values-input]');
         config.hidden = !enabled;
+        if (currentValuesToggle instanceof HTMLElement) {
+            currentValuesToggle.hidden = !enabled;
+        }
+        currentValuesInputs.forEach((input) => {
+            if (input instanceof HTMLInputElement) {
+                input.disabled = !enabled;
+            }
+        });
 
         if (!enabled) {
             return;

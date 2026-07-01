@@ -107,6 +107,15 @@
                                 tooltipText: 'Quickly disable a row without deleting its prompt and target field setup. Learn more in the advanced row settings docs.'
                             } only %}
                         </label>
+                        <label class="checkbox-label" data-related-current-values-toggle hidden>
+                            <input type="hidden" name="rows[{{ rowId }}][related][forceUseCurrentValues]" value="0" data-related-current-values-input>
+                            <input type="checkbox" name="rows[{{ rowId }}][related][forceUseCurrentValues]" value="1"{% if row.related.forceUseCurrentValues ?? false %} checked{% endif %} data-related-current-values-input>
+                            Force Use Current Values
+                            {% include 'autofill/fields/autofill/partials/_help-tip.twig' with {
+                                tooltipHtml: 'Keeps already selected related elements at the front of the suggestion, then appends any new AI-selected values that are not already selected. <a href="' ~ advancedRowSettingsDocsUrl ~ '" target="_blank" rel="noopener">Learn more</a>.',
+                                tooltipText: 'Keeps already selected related elements at the front of the suggestion, then appends any new AI-selected values that are not already selected. Learn more in the advanced row settings docs.'
+                            } only %}
+                        </label>
                     </div>
                 </div>
 

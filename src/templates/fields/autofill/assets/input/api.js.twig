@@ -42,10 +42,10 @@
         return String(data.prompt || '');
     };
 
-    runtime.normalizeResponse = async ({ endpoint, fieldId, rawResponse }) => {
+    runtime.normalizeResponse = async ({ endpoint, fieldId, rawResponse, entryId, siteId }) => {
         const data = await postJson(
             endpoint,
-            { rawResponse, fieldId },
+            { rawResponse, fieldId, entryId, siteId },
             'Could not normalize response.',
         );
 

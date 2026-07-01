@@ -7,6 +7,7 @@ namespace jtdev\craftautofill\services\ai;
 use Craft;
 use craft\base\Component;
 use craft\base\FieldInterface;
+use craft\fields\BaseRelationField;
 use craft\fields\Table as TableField;
 use craft\helpers\Cp;
 use craft\helpers\Json;
@@ -66,11 +67,16 @@ class AiResponseNormalizer extends Component
         return $result;
     }
 
-    public function normalizeAutofillResponse(string $rawResponse, int $fieldId): AiGenerationResult
+    public function normalizeAutofillResponse(
+        string $rawResponse,
+        int $fieldId,
+        ?int $entryId = null,
+        ?int $siteId = null,
+    ): AiGenerationResult
     {
         try {
             $parsed = $this->parseSuggestionJson($rawResponse);
-            $config = $this->fieldConfigBuilder->buildFromFieldId($fieldId);
+            $config = $this->fieldConfigBuilder->buildFromFieldId($fieldId, $entryId, $siteId);
             $autofillField = $this->resolveAutofillField($fieldId);
         } catch (InvalidArgumentException $exception) {
             return new AiGenerationResult([
@@ -111,6 +117,8 @@ class AiResponseNormalizer extends Component
             $targetFieldUid = (string)($match['targetFieldUid'] ?? '');
             $fieldContract = is_array($match['fieldContract'] ?? null) ? $match['fieldContract'] : [];
             $adapterKey = (string)($match['adapterKey'] ?? '');
+            $relatedConfig = is_array($match['related'] ?? null) ? $match['related'] : [];
+            $currentValue = $match['currentValue'] ?? null;
             $validationErrors = [];
 
             if (!$hasRawValue) {
@@ -124,6 +132,7 @@ class AiResponseNormalizer extends Component
             }
 
             $value = $this->normalizeSuggestionValue($autofillField, $targetFieldUid, $rawValue, $fieldContract);
+            $value = $this->forceCurrentRelatedValues($autofillField, $targetFieldUid, $value, $currentValue, $relatedConfig, $adapterKey);
             $validationErrors = array_merge(
                 $validationErrors,
                 $this->validateSuggestionValue($autofillField, $targetFieldUid, $rawValue, $value, $fieldContract)
@@ -274,6 +283,8 @@ class AiResponseNormalizer extends Component
                 'handle' => $handle,
                 'requiresApproval' => $row['requiresApproval'] ?? true,
                 'overrideCurrentValue' => $row['overrideCurrentValue'] ?? true,
+                'related' => $row['related'] ?? [],
+                'currentValue' => $config['currentValueByUid'][$targetFieldUid] ?? null,
                 'fieldContract' => $config['fieldContractsByUid'][$targetFieldUid] ?? [],
                 'adapterKey' => (string)($config['fieldAdapterKeyByUid'][$targetFieldUid] ?? ''),
             ];
@@ -308,6 +319,8 @@ class AiResponseNormalizer extends Component
                 'handle' => $handle,
                 'requiresApproval' => $row['requiresApproval'] ?? true,
                 'overrideCurrentValue' => $row['overrideCurrentValue'] ?? true,
+                'related' => $row['related'] ?? [],
+                'currentValue' => $config['currentValueByUid'][$targetFieldUid] ?? null,
                 'fieldContract' => $config['fieldContractsByUid'][$targetFieldUid] ?? [],
                 'adapterKey' => (string)($config['fieldAdapterKeyByUid'][$targetFieldUid] ?? ''),
                 'matchedByOrder' => true,
@@ -359,6 +372,51 @@ class AiResponseNormalizer extends Component
         }
 
         return $this->normalizeByContract($value, $fieldContract);
+    }
+
+    private function forceCurrentRelatedValues(
+        ?AutofillField $autofillField,
+        string $fieldUid,
+        mixed $normalizedValue,
+        mixed $currentValue,
+        array $relatedConfig,
+        string $adapterKey,
+    ): mixed {
+        if (
+            !in_array($adapterKey, ['categories', 'tags', 'entries'], true) ||
+            !$this->asBool($relatedConfig['forceUseCurrentValues'] ?? false, false) ||
+            !is_array($normalizedValue) ||
+            !is_array($currentValue)
+        ) {
+            return $normalizedValue;
+        }
+
+        $merged = [];
+        foreach (array_merge($currentValue, $normalizedValue) as $title) {
+            $trimmed = trim((string)$title);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            $exists = false;
+            foreach ($merged as $existing) {
+                if (strcasecmp($existing, $trimmed) === 0) {
+                    $exists = true;
+                    break;
+                }
+            }
+
+            if (!$exists) {
+                $merged[] = $trimmed;
+            }
+        }
+
+        $field = $this->getCustomField($autofillField, $fieldUid);
+        if ($field instanceof BaseRelationField && is_numeric($field->maxRelations) && (int)$field->maxRelations > 0) {
+            return array_slice($merged, 0, (int)$field->maxRelations);
+        }
+
+        return $merged;
     }
 
     private function normalizeUnmatchedSuggestionValue(mixed $value): mixed

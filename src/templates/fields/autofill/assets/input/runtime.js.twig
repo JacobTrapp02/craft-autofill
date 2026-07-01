@@ -146,6 +146,8 @@
                         endpoint: responseNormalizeActionUrl,
                         fieldId,
                         rawResponse: responseInput.value,
+                        entryId: Number(config.entryId || 0),
+                        siteId: Number(config.siteId || 0) || null,
                     });
                     await startReviewFlow(suggestions);
                 } catch (error) {
