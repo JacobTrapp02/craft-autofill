@@ -100,6 +100,8 @@
         };
 
         const finishReview = ({ reloadPage = false } = {}) => {
+            suggestions = [];
+            currentIndex = 0;
             teardown();
 
             if (reloadPage) {
@@ -241,12 +243,23 @@
                 return;
             }
 
-            if (target === modalState.backdrop || target.matches('[data-autofill-close]')) {
-                teardown();
+            const ownControl = (selector) => {
+                const control = target.closest(selector);
+                if (!(control instanceof HTMLElement)) {
+                    return null;
+                }
+
+                return control.closest('[data-autofill-review-modal]') === modalState.modal
+                    ? control
+                    : null;
+            };
+
+            if (target === modalState.backdrop || ownControl('[data-autofill-close]')) {
+                clear();
                 return;
             }
 
-            if (target.matches('[data-autofill-accept]')) {
+            if (ownControl('[data-autofill-accept]')) {
                 if (!suggestions.length || !(modalState.editor instanceof HTMLElement)) {
                     return;
                 }
@@ -281,7 +294,7 @@
                 return;
             }
 
-            if (target.matches('[data-autofill-reject]')) {
+            if (ownControl('[data-autofill-reject]')) {
                 if (!suggestions.length) {
                     return;
                 }
@@ -294,7 +307,7 @@
                 return;
             }
 
-            if (target.matches('[data-autofill-prev]')) {
+            if (ownControl('[data-autofill-prev]')) {
                 if (!suggestions.length) {
                     return;
                 }
@@ -303,7 +316,7 @@
                 return;
             }
 
-            if (target.matches('[data-autofill-next]')) {
+            if (ownControl('[data-autofill-next]')) {
                 if (!suggestions.length) {
                     return;
                 }

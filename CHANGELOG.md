@@ -1,4 +1,6 @@
 # Release Notes for Autofill
+## In progress
+- Bug fix: close autofill modal wouldn't clear suggestions: next and prev buttons not specific to modals
 ## 1.0.4
 - Helper method for whether a specific autofill field and entry were successfully completed already
 
