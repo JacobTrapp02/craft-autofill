@@ -7,6 +7,8 @@
         let suggestions = [];
         let currentIndex = 0;
         let isLoading = false;
+        let spotlightAnchor = null;
+        let spotlightFrame = null;
         const normalizedFieldId = Number(fieldId || 0);
         const fieldIdAttr = Number.isFinite(normalizedFieldId) && normalizedFieldId > 0
             ? String(normalizedFieldId)
@@ -78,6 +80,11 @@
             if (modalState.modal instanceof HTMLElement) {
                 modalState.modal.hidden = true;
             }
+            spotlightAnchor = null;
+            if (spotlightFrame !== null) {
+                window.cancelAnimationFrame(spotlightFrame);
+                spotlightFrame = null;
+            }
             setModalDisplayMode('');
             setLoadingState(false);
             if (modalState.status instanceof HTMLElement) {
@@ -121,6 +128,71 @@
             }
         };
 
+        const clearSpotlightStyles = () => {
+            if (!(modalState.backdrop instanceof HTMLElement)) {
+                return;
+            }
+
+            [
+                '--autofill-spotlight-top',
+                '--autofill-spotlight-left',
+                '--autofill-spotlight-width',
+                '--autofill-spotlight-height',
+            ].forEach((property) => {
+                modalState.backdrop.style.removeProperty(property);
+            });
+        };
+
+        const clearSpotlight = () => {
+            spotlightAnchor = null;
+            if (spotlightFrame !== null) {
+                window.cancelAnimationFrame(spotlightFrame);
+                spotlightFrame = null;
+            }
+            clearSpotlightStyles();
+        };
+
+        const setSpotlightForAnchor = (anchor) => {
+            if (!(modalState.backdrop instanceof HTMLElement) || !(anchor instanceof HTMLElement)) {
+                clearSpotlight();
+                return;
+            }
+
+            const rect = anchor.getBoundingClientRect();
+            if (
+                rect.bottom <= 0 ||
+                rect.right <= 0 ||
+                rect.top >= window.innerHeight ||
+                rect.left >= window.innerWidth
+            ) {
+                clearSpotlightStyles();
+                return;
+            }
+
+            const padding = 8;
+            const top = Math.max(0, rect.top - padding);
+            const left = Math.max(0, rect.left - padding);
+            const right = Math.min(window.innerWidth, rect.right + padding);
+            const bottom = Math.min(window.innerHeight, rect.bottom + padding);
+            modalState.backdrop.style.setProperty('--autofill-spotlight-top', `${top}px`);
+            modalState.backdrop.style.setProperty('--autofill-spotlight-left', `${left}px`);
+            modalState.backdrop.style.setProperty('--autofill-spotlight-width', `${Math.max(0, right - left)}px`);
+            modalState.backdrop.style.setProperty('--autofill-spotlight-height', `${Math.max(0, bottom - top)}px`);
+        };
+
+        const queueSpotlightRefresh = () => {
+            if (!(spotlightAnchor instanceof HTMLElement) || spotlightFrame !== null) {
+                return;
+            }
+
+            spotlightFrame = window.requestAnimationFrame(() => {
+                spotlightFrame = null;
+                if (spotlightAnchor instanceof HTMLElement) {
+                    setSpotlightForAnchor(spotlightAnchor);
+                }
+            });
+        };
+
         const setLoadingState = (loading, message = '') => {
             isLoading = Boolean(loading);
             if (modalState.modal instanceof HTMLElement) {
@@ -160,6 +232,7 @@
             if (modalState.editor instanceof HTMLElement) {
                 modalState.editor.innerHTML = '';
             }
+            clearSpotlight();
         };
 
         const positionBelowField = (input) => {
@@ -171,6 +244,12 @@
             const gap = 12;
             const viewportPadding = 12;
             const rect = anchor.getBoundingClientRect();
+            if (input.closest('[data-autofill-runtime]')) {
+                clearSpotlight();
+            } else {
+                spotlightAnchor = anchor;
+                setSpotlightForAnchor(anchor);
+            }
             const availableHeight = Math.max(160, window.innerHeight - (viewportPadding * 2));
             modalState.modal.style.maxHeight = `${availableHeight}px`;
             modalState.modal.style.overflowY = 'auto';
@@ -268,7 +347,11 @@
                     : null;
             };
 
-            if (target === modalState.backdrop || ownControl('[data-autofill-close]')) {
+            if (target === modalState.backdrop) {
+                return;
+            }
+
+            if (ownControl('[data-autofill-close]')) {
                 clear();
                 return;
             }
@@ -345,6 +428,7 @@
             positionBelowField,
             setSuggestions,
             showLoading,
+            refreshSpotlight: queueSpotlightRefresh,
         };
     };
 })();

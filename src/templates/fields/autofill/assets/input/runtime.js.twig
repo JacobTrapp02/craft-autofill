@@ -160,6 +160,8 @@
         }
 
         document.addEventListener('click', reviewModal.handleDocumentClick);
+        window.addEventListener('resize', reviewModal.refreshSpotlight, { passive: true });
+        document.addEventListener('scroll', reviewModal.refreshSpotlight, { passive: true, capture: true });
         root.dataset.autofillInitialized = '1';
     };
 

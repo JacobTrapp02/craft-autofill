@@ -23,10 +23,47 @@
         return visibleEnabled || list[0] || null;
     };
 
+    const fieldContainerForHandle = (escapedHandle) => {
+        const fieldContainer = document.querySelector(
+            `[data-attribute="${escapedHandle}"], #fields-${escapedHandle}-field`
+        );
+
+        return fieldContainer instanceof HTMLElement ? fieldContainer : null;
+    };
+
+    const isSeomaticFieldContainer = (fieldContainer) => {
+        if (!(fieldContainer instanceof HTMLElement)) {
+            return false;
+        }
+
+        const dataType = String(fieldContainer.dataset.type || '').toLowerCase();
+        return dataType.includes('seomatic') || dataType.includes('seosettings');
+    };
+
+    const bestInputInFieldContainer = (fieldContainer) => (
+        pickBest(fieldContainer.querySelectorAll(
+            'input[type="text"], input[type="tel"], input[type="number"], textarea, select, input:not([type="hidden"])'
+        ))
+    );
+
+    const closestSeomaticFieldContainer = (input) => {
+        let cursor = input instanceof HTMLElement ? input : null;
+        while (cursor) {
+            if (isSeomaticFieldContainer(cursor)) {
+                return cursor;
+            }
+
+            cursor = cursor.parentElement;
+        }
+
+        return null;
+    };
+
     runtime.findFieldInputByHandle = (handle) => {
         const escaped = escapeHandle(handle);
         const base = `[name="fields[${escaped}]"]`;
         const nestedBase = `[name^="fields[${escaped}]["]`;
+        const fieldContainer = fieldContainerForHandle(escaped);
         const nativeCandidates = [
             `textarea[name="${escaped}"]`,
             `select[name="${escaped}"]`,
@@ -57,6 +94,10 @@
             return primaryMatch;
         }
 
+        if (isSeomaticFieldContainer(fieldContainer)) {
+            return bestInputInFieldContainer(fieldContainer);
+        }
+
         // Fallback for fields that use nested names such as fields[handle][value].
         const nestedMatch = (
             pickBest(document.querySelectorAll(`textarea${nestedBase}`)) ||
@@ -74,16 +115,11 @@
         }
 
         // Last-resort fallback by Craft field container markup.
-        const fieldContainer = document.querySelector(
-            `[data-attribute="${escaped}"], #fields-${escaped}-field`
-        );
         if (!(fieldContainer instanceof HTMLElement)) {
             return null;
         }
 
-        return pickBest(fieldContainer.querySelectorAll(
-            'input[type="text"], input[type="tel"], input[type="number"], textarea, select, input:not([type="hidden"])'
-        ));
+        return bestInputInFieldContainer(fieldContainer);
     };
 
     runtime.findSplitDateTimeInputsByHandle = (handle) => {
@@ -117,6 +153,11 @@
         if (!(input instanceof HTMLElement)) {
             return input;
         }
+        const seomaticFieldContainer = closestSeomaticFieldContainer(input);
+        if (seomaticFieldContainer instanceof HTMLElement) {
+            return seomaticFieldContainer;
+        }
+
         return (
             input.closest('.field') ||
             input.closest('.input') ||
