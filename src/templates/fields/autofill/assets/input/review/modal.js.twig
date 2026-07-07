@@ -96,6 +96,9 @@
             if (modalState.editor instanceof HTMLElement) {
                 modalState.editor.innerHTML = '';
             }
+            if (typeof runtime.clearFieldHighlight === 'function') {
+                runtime.clearFieldHighlight();
+            }
             isLoading = false;
         };
 
@@ -168,8 +171,19 @@
             const gap = 12;
             const viewportPadding = 12;
             const rect = anchor.getBoundingClientRect();
+            const availableHeight = Math.max(160, window.innerHeight - (viewportPadding * 2));
+            modalState.modal.style.maxHeight = `${availableHeight}px`;
+            modalState.modal.style.overflowY = 'auto';
+
             const modalHeight = modalState.modal.offsetHeight || 320;
-            const idealTop = rect.bottom + gap;
+            const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+            const spaceAbove = rect.top - viewportPadding;
+            const canFitBelow = spaceBelow >= modalHeight + gap;
+            const canFitAbove = spaceAbove >= modalHeight + gap;
+            const shouldPlaceAbove = !canFitBelow && (canFitAbove || spaceAbove > spaceBelow);
+            const idealTop = shouldPlaceAbove
+                ? rect.top - modalHeight - gap
+                : rect.bottom + gap;
             const maxTop = window.innerHeight - modalHeight - viewportPadding;
             const computedTop = Math.max(viewportPadding, Math.min(idealTop, maxTop));
             modalState.modal.style.top = `${computedTop}px`;

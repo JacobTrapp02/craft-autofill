@@ -1,4 +1,7 @@
 # Release Notes for Autofill
+## In Progress
+- Improvement: review modal now stays positioned near the active field, flips above fields near the bottom of the viewport, keeps the active field highlighted during review, and attempts to open the sidebar/details panel when reviewing sidebar fields
+
 ## 1.0.5
 - Bug fix: close autofill modal wouldn't clear suggestions: next and prev buttons not specific to modals
 - Feature: related entries Force Use Current Values setting - merge selected values and suggestions together

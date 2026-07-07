@@ -5,7 +5,88 @@
     const HIGHLIGHT_CLASS = 'autofill-focus-highlight';
     const TOP_VIEWPORT_OFFSET = 96;
     let highlightedAnchor = null;
-    let highlightTimer = null;
+
+    const hasVisibleBox = (element) => {
+        if (!(element instanceof HTMLElement)) {
+            return false;
+        }
+
+        const rect = element.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) {
+            return false;
+        }
+
+        const style = window.getComputedStyle(element);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+    };
+
+    const clickIfCollapsed = (control) => {
+        if (!(control instanceof HTMLElement)) {
+            return false;
+        }
+
+        const expanded = String(control.getAttribute('aria-expanded') || '').toLowerCase();
+        const pressed = String(control.getAttribute('aria-pressed') || '').toLowerCase();
+        if (expanded === 'true' || pressed === 'true') {
+            return false;
+        }
+
+        control.click();
+        return true;
+    };
+
+    const openDetailsSidebar = () => {
+        const selectors = [
+            '[aria-controls][aria-expanded="false"][aria-label*="sidebar" i]',
+            '[aria-controls][aria-expanded="false"][aria-label*="details" i]',
+            '[aria-controls][aria-expanded="false"][title*="sidebar" i]',
+            '[aria-controls][aria-expanded="false"][title*="details" i]',
+            '[data-icon="sidebar"][aria-expanded="false"]',
+            '[data-icon="info"][aria-expanded="false"]',
+            '.sidebar-toggle[aria-expanded="false"]',
+            '.details-toggle[aria-expanded="false"]',
+        ];
+
+        for (const selector of selectors) {
+            const control = document.querySelector(selector);
+            if (clickIfCollapsed(control)) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    const revealHiddenAncestors = (input) => {
+        let opened = false;
+        let cursor = input.parentElement;
+        while (cursor) {
+            if (cursor.id) {
+                const escapedId = window.CSS && typeof window.CSS.escape === 'function'
+                    ? window.CSS.escape(cursor.id)
+                    : cursor.id.replace(/"/g, '\\"');
+                const control = document.querySelector(`[aria-controls="${escapedId}"][aria-expanded="false"]`);
+                opened = clickIfCollapsed(control) || opened;
+            }
+
+            if (cursor.hasAttribute('hidden')) {
+                cursor.removeAttribute('hidden');
+                opened = true;
+            }
+            if (cursor.getAttribute('aria-hidden') === 'true') {
+                cursor.setAttribute('aria-hidden', 'false');
+                opened = true;
+            }
+            if (cursor.classList.contains('hidden')) {
+                cursor.classList.remove('hidden');
+                opened = true;
+            }
+
+            cursor = cursor.parentElement;
+        }
+
+        return opened;
+    };
 
     const scrollFieldIntoTopView = (input) => {
         const anchor = runtime.getInteractionAnchor(input);
@@ -74,25 +155,16 @@
     };
 
     runtime.prepareInputForInteraction = (input, options = {}) => {
+        revealHiddenAncestors(input);
         activateTabForInput(input);
         scrollFieldIntoTopView(input);
         const anchor = runtime.getInteractionAnchor(input);
         if (highlightedAnchor instanceof HTMLElement) {
             highlightedAnchor.classList.remove(HIGHLIGHT_CLASS);
         }
-        if (highlightTimer) {
-            window.clearTimeout(highlightTimer);
-        }
         if (anchor instanceof HTMLElement) {
             anchor.classList.add(HIGHLIGHT_CLASS);
             highlightedAnchor = anchor;
-            highlightTimer = window.setTimeout(() => {
-                if (highlightedAnchor instanceof HTMLElement) {
-                    highlightedAnchor.classList.remove(HIGHLIGHT_CLASS);
-                }
-                highlightedAnchor = null;
-                highlightTimer = null;
-            }, 1800);
         }
         if (typeof input.focus === 'function') {
             input.focus();
@@ -102,14 +174,39 @@
         }
     };
 
+    runtime.clearFieldHighlight = () => {
+        if (highlightedAnchor instanceof HTMLElement) {
+            highlightedAnchor.classList.remove(HIGHLIGHT_CLASS);
+        }
+        highlightedAnchor = null;
+    };
+
     runtime.focusMatchedField = (matchedHandle, options = {}) => {
         if (!matchedHandle) {
             return;
         }
-        const input = runtime.findFieldInputByHandle(matchedHandle);
-        if (!(input instanceof HTMLElement)) {
-            return;
+
+        const prepareMatchedInput = (input) => {
+            if (!(input instanceof HTMLElement)) {
+                return false;
+            }
+
+            runtime.prepareInputForInteraction(input, options);
+            return true;
+        };
+
+        let input = runtime.findFieldInputByHandle(matchedHandle);
+        if (!(input instanceof HTMLElement) || !hasVisibleBox(input)) {
+            const sidebarOpened = openDetailsSidebar();
+            input = runtime.findFieldInputByHandle(matchedHandle);
+            if ((!(input instanceof HTMLElement) || !hasVisibleBox(input)) && sidebarOpened) {
+                window.setTimeout(() => {
+                    prepareMatchedInput(runtime.findFieldInputByHandle(matchedHandle));
+                }, 120);
+                return;
+            }
         }
-        runtime.prepareInputForInteraction(input, options);
+
+        prepareMatchedInput(input);
     };
 })();
