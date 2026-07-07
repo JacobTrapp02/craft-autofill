@@ -352,7 +352,7 @@
             }
 
             if (ownControl('[data-autofill-close]')) {
-                clear();
+                finishReview({ reloadPage: true });
                 return;
             }
 
@@ -381,19 +381,6 @@
                         renderCurrent();
                         return;
                     }
-                }
-                if (currentIndex < suggestions.length - 1) {
-                    currentIndex += 1;
-                    renderCurrent();
-                } else {
-                    finishReview({ reloadPage: true });
-                }
-                return;
-            }
-
-            if (ownControl('[data-autofill-reject]')) {
-                if (!suggestions.length) {
-                    return;
                 }
                 if (currentIndex < suggestions.length - 1) {
                     currentIndex += 1;
