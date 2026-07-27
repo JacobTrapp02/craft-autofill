@@ -742,7 +742,27 @@ class AiResponseNormalizer extends Component
             return $this->normalizeOptionValues($value, $fieldContract);
         }
 
+        // Plain string fields (including native entry titles) are not option lists.
+        // Passing them through normalizeOptionValue() splits comma-containing text
+        // before it can be reviewed or saved.
+        if (!is_array($fieldContract['options'] ?? null)) {
+            return $this->normalizeStringValue($value);
+        }
+
         return $this->normalizeOptionValue($value, $fieldContract);
+    }
+
+    private function normalizeStringValue(mixed $value): string
+    {
+        if (is_string($value)) {
+            return trim($value);
+        }
+
+        if (is_scalar($value)) {
+            return trim((string)$value);
+        }
+
+        return '';
     }
 
     /**
