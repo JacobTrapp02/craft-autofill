@@ -5,10 +5,10 @@
   "license": "proprietary",
   "support": {
     "email": "jake.trapp02@gmail.com",
-    "issues": "https://github.com/JacobTrapp02/craft-autofill/issues",
-    "source": "https://github.com/JacobTrapp02/craft-autofill",
+    "issues": "https://github.com/JakeTrapp/craft-autofill/issues",
+    "source": "https://github.com/JakeTrapp/craft-autofill",
     "docs": "https://www.jtdevelop.com/development/plugins/autofill",
-    "rss": "https://github.com/JacobTrapp02/craft-autofill/releases.atom"
+    "rss": "https://github.com/JakeTrapp/craft-autofill/releases.atom"
   },
   "require": {
     "php": ">=8.2",
